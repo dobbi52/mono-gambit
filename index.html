@@ -208,6 +208,11 @@ const CARDS=[
 {id:'nhold',t:'n',rar:1,name:'물고 늘어지기',desc:'턴마다 한 번, 나이트가 적을 못 쓰러뜨려도 한 번 더 움직여요.'},
 {id:'bpierce2',t:'b',rar:0,name:'관통 일격',desc:'비숍이 뚫고 지나간 적에게 2 피해를 줘요.',req:'bpierce'},
 {id:'gchase',t:'a',rar:2,name:'추격',desc:'턴마다 한 번, 어떤 말이든 적을 못 쓰러뜨려도 한 번 더 움직여요.'},
+{id:'ushadow',t:'n',rar:2,name:'그림자 기사',desc:'나이트가 잡으면 대각선 이웃 적도 맞아요.',lock:1},
+{id:'ulight',t:'b',rar:2,name:'태양의 비숍',desc:'비숍이 잡으면 네 대각선 방향의 첫 적이 모두 맞아요.',lock:1},
+{id:'urook',t:'r',rar:2,name:'지진',desc:'룩이 잡으면 같은 가로줄의 적이 모두 맞아요.',lock:1},
+{id:'upawn',t:'p',rar:2,name:'혁명',desc:'폰이 잡으면 그 앞 빈칸에 새 폰이 생겨요.',lock:1},
+{id:'ugold',t:'a',rar:2,name:'황금 왕관',desc:'엘리트와 보스를 이기면 골드가 2배예요.',lock:1},
 {id:'gcombo',t:'a',rar:1,name:'콤보 보너스',desc:'콤보 3부터는 잡을 때 골드가 2배예요.'},
 {id:'gblood',t:'a',rar:2,name:'피의 맛',desc:'라운드마다 한 번, 콤보 5에 닿으면 목숨이 1 회복돼요.'},
 {id:'gloot',t:'a',rar:1,name:'전리품',desc:'라운드 보상 카드가 4장으로 늘어나요.'}];
@@ -250,9 +255,31 @@ let AC=null;
 function sfx(fq,d,type,vol,slide){try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime,o=AC.createOscillator(),g=AC.createGain();o.type=type||'square';o.frequency.setValueAtTime(fq,t);if(slide)o.frequency.exponentialRampToValueAtTime(Math.max(40,fq*slide),t+d);g.gain.setValueAtTime(vol||0.05,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+0.02)}catch(e){}}
 function thud(v){try{if(!AC)AC=new(window.AudioContext||window.webkitAudioContext)();const t=AC.currentTime,n=AC.sampleRate*0.12,b=AC.createBuffer(1,n,AC.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=(Math.random()*2-1)*Math.pow(1-i/n,3);const s=AC.createBufferSource(),f=AC.createBiquadFilter(),g=AC.createGain();f.type='lowpass';f.frequency.value=900;g.gain.value=v||0.12;s.buffer=b;s.connect(f);f.connect(g);g.connect(AC.destination);s.start(t)}catch(e){}}
 
+/* 영혼과 해금 (그 기기에 저장) */
+const UNL=[
+{id:'army_knight',sec:'army',name:'기사단',desc:'킹 · 나이트 2 · 폰 2로 시작해요.',cost:15,army:['k','n','n','p','p']},
+{id:'army_bishop',sec:'army',name:'성직자단',desc:'킹 · 비숍 2 · 폰 2로 시작해요.',cost:20,army:['k','b','b','p','p']},
+{id:'army_wall',sec:'army',name:'성벽단',desc:'킹 · 룩 1 · 폰 3으로 시작해요.',cost:30,army:['k','r','p','p','p']},
+{id:'bonus_gold',sec:'bonus',name:'든든한 지갑',desc:'처음 골드가 10 더 많아요.',cost:10},
+{id:'bonus_card',sec:'bonus',name:'출정의 축복',desc:'첫 전투 전에 축복 카드를 1장 골라요.',cost:20},
+{id:'bonus_life',sec:'bonus',name:'여분의 심장',desc:'목숨 하나를 더 갖고 시작해요.',cost:25},
+{id:'map_reroll',sec:'map',name:'점술가의 지도',desc:'판마다 한 번, 지도 칸 하나를 다시 뽑아요.',cost:25},
+{id:'card_ushadow',sec:'card',name:'그림자 기사',desc:'전설 축복이 카드에 나오기 시작해요.',cost:20},
+{id:'card_ulight',sec:'card',name:'태양의 비숍',desc:'전설 축복이 카드에 나오기 시작해요.',cost:20},
+{id:'card_urook',sec:'card',name:'지진',desc:'전설 축복이 카드에 나오기 시작해요.',cost:20},
+{id:'card_upawn',sec:'card',name:'혁명',desc:'전설 축복이 카드에 나오기 시작해요.',cost:20},
+{id:'card_ugold',sec:'card',name:'황금 왕관',desc:'전설 축복이 카드에 나오기 시작해요.',cost:20}];
+const ARMY0=['k','n','b','p','p'];
+let META={souls:0,unl:[],army:'basic',total:0};
+try{const m=JSON.parse(localStorage.getItem('mg_meta')||'null');if(m)META=Object.assign(META,m)}catch(e){}
+function saveMeta(){try{localStorage.setItem('mg_meta',JSON.stringify(META))}catch(e){}}
+const hasU=id=>META.unl.includes(id);
+function gainSoul(n){META.souls+=n;META.total=(META.total||0)+n;if(G)G.soulsRun=(G.soulsRun||0)+n;saveMeta()}
 function newGame(){pieces=[];dead.length=0;parts.length=0;G={round:0,gold:5,goldShown:5,goldBump:0,lives:3,xp:{p:0,n:0,b:0,r:0,q:0,k:0},lvl:{p:1,n:1,b:1,r:1,q:1,k:1},cards:new Set(),cardOrder:[],mode:'busy',sel:null,selT:0,moves:[],chainPiece:null,combo:0,pending:[],shieldUsed:false,shake:0,hurt:0,banner:null,comboFx:null,freezeUntil:0,blind:1,intentT:0,lvFlash:{},act:1,floor:0,depth:1,view:'board',st:null,stKey:'',busyMsg:'',btnDown:false,pillSel:-1,pillType:null,pillRects:[]};
-addPiece('p','k',2,7);addPiece('p','n',1,7);addPiece('p','b',3,7);addPiece('p','p',2,6);addPiece('p','p',3,6);
+{const a=UNL.find(u=>u.id===META.army&&hasU(u.id)),list=a?a.army:ARMY0;const sp=[[2,7],[1,7],[3,7],[2,6],[3,6],[1,6],[4,6]];list.forEach((t,i)=>addPiece('p',t,sp[i][0],sp[i][1]))}
+G.soulsRun=0;if(hasU('bonus_gold')){G.gold+=10;G.goldShown=G.gold}if(hasU('bonus_life'))G.lives++;if(hasU('bonus_card'))G.pending.push('*a');G.rerollLeft=hasU('map_reroll')?1:0;
 updatePanel()}
+async function startRun(){newGame();genMap();await openMapView();if(G.pending.length){G.mode='busy';await processCards();G.mode='map';updatePanel()}}
 
 function lineupSpots(){const my=mine(),k=king(),ord={q:0,r:1,b:2,n:3,p:9};const others=my.filter(p=>p!==k).sort((a,b)=>ord[a.t]-ord[b.t]);
 const back=[[1,7],[3,7],[0,7],[4,7],[5,7]],front=[[2,6],[3,6],[1,6],[4,6],[0,6],[5,6],[2,5],[3,5],[1,5],[4,5],[0,5],[5,5]];const out=[];if(k)out.push([k,2,7]);
@@ -327,6 +354,10 @@ if(landed){p.sq=0;wobble(p,isJump?0.8:0.5);dust(p.q,p.r,isJump?10:5);if(isJump){
 if(landed&&p.t==='n'&&has('ntrample')){const dq=p.q-from.q,dr=p.r-from.r,lr=Math.abs(dr)>=Math.abs(dq),L=lr?Math.abs(dr):Math.abs(dq),sl=lr?Math.sign(dr):Math.sign(dq),ss=lr?dq:dr;const tiles=[];for(let k=1;k<L;k++)for(const o2 of[0,ss]){tiles.push(lr?[from.q+o2,from.r+sl*k]:[from.q+sl*k,from.r+o2])}
 let any=false;for(const t2 of tiles){const o=occ(t2[0],t2[1]);if(o&&o.side==='e'){if(!any){await sleep(60);any=true}if(hitEnemy(o,p,[Math.sign(dq),Math.sign(dr)])===true){hit=true;kill=true}}}}
 if(kill&&landed){
+if(p.t==='n'&&has('ushadow')){await sleep(80);let a=false;for(const d of DIAG){const o=occ(p.q+d[0],p.r+d[1]);if(o&&o.side==='e'){hitEnemy(o,p,d);a=true}}if(a)ring(p.q,p.r,'rgba(160,140,220,0.9)',50)}
+if(p.t==='b'&&has('ulight')){await sleep(80);ring(p.q,p.r,'#fff3c0',64);for(const d of DIAG){let q=p.q,r=p.r;while(true){q+=d[0];r+=d[1];if(!inb(q,r))break;const o=occ(q,r);if(!o)continue;if(o.side==='e')hitEnemy(o,p,d);break}}}
+if(p.t==='r'&&has('urook')){await sleep(80);G.shake=Math.max(G.shake,12);thud(0.18);for(const o of enemies().filter(e=>e.r===p.r))hitEnemy(o,p,[Math.sign(o.q-p.q),0])}
+if(p.t==='p'&&has('upawn')&&inb(p.q,p.r-1)&&!occ(p.q,p.r-1)&&mine().length<CAP){const np=addPiece('p','p',p.q,p.r-1);np.vr=p.r-1.6;np.alpha=0;move(np,p.q,p.r-1,320,{fade:true,ease:'back'}).then(()=>wobble(np,0.5));floatText('혁명!',p.q,p.r,'#f0c040',13,70)}
 if(p.t==='n'&&has('nquake')){await sleep(90);ring(p.q,p.r,'rgba(236,232,222,0.9)',60);G.shake=Math.max(G.shake,10);for(const d of ORTH){const o=occ(p.q+d[0],p.r+d[1]);if(o&&o.side==='e')hitEnemy(o,p,d)}}
 if(p.t==='r'&&has('rpush')){const a=m.path.length>1?m.path[m.path.length-2]:from;const dq=Math.sign(p.q-a.q),dr=Math.sign(p.r-a.r);const o=occ(p.q+dq,p.r+dr);if(o&&o.side==='e'){await sleep(90);hitEnemy(o,p,[dq,dr])}}}
 if(kill&&landed&&p.t==='b'&&has('bholy')){let any=false;for(const d of DIAG){const o=occ(p.q+d[0],p.r+d[1]);if(o&&o.side==='e'){o.stun=1;o.intent=null;o.flash=1;any=true;floatText('멈춤',o.q,o.r,'#fff3c0',12,52)}}if(any){ring(p.q,p.r,'rgba(255,243,192,0.9)',56);sfx(990,0.2,'triangle',0.05,1.3)}}
@@ -402,7 +433,7 @@ function mapTap(px,py){for(const n of G.map.nodes){if(n.f===0)continue;const r=n
 async function goNode(id){if(G.mode!=='map'||!availNodes().includes(id))return;G.mode='busy';const a=G.map.nodes[G.mapPos],b=G.map.nodes[id];sfx(360,0.08,'triangle',0.04,1.4);updatePanel('이동 중…');
 await anim(520,(e,k)=>{G.mk={x:a.x+(b.x-a.x)*e,y:a.y+(b.y-a.y)*e-Math.sin(k*Math.PI)*16}},'inout');thud(0.06);
 b.done=true;G.mapPos=id;G.path.push(id);G.floor=b.f;G.depth=(G.act-1)*4+b.f;G.mapSel=null;await sleep(220);enterNode(b)}
-async function enterNode(n){if(n.t==='fight'||n.t==='elite'||n.t==='boss'){await blinds(1,300);return startRound(n.t)}
+async function enterNode(n){if(n.t==='shop'||n.t==='rest'||n.t==='event')gainSoul(1);if(n.t==='fight'||n.t==='elite'||n.t==='boss'){await blinds(1,300);return startRound(n.t)}
 if(n.t==='shop')await openShop();else if(n.t==='rest')await openRest();else await openEvent();
 G.mode='map';updatePanel()}
 async function startRound(kind){G.kind=kind;G.round++;G.shieldUsed=false;G.bloodUsed=false;for(const p of mine())p.shieldUsed=false;G.mode='busy';G.combo=0;G.sel=null;G.moves=[];G.inspect=null;updatePanel('준비 중…');
@@ -412,7 +443,7 @@ if(kind==='boss'){G.banner={text:'보스 · '+ROLE[sw.bossRole].name,sub:ROLE[sw
 else G.banner={text:(kind==='elite'?'엘리트 · ':'')+G.act+'-'+G.floor+' 전투',sub:nrs||(kind==='elite'?'강한 적이 몰려와요':''),t0:performance.now(),dur:1300};
 sfx(392,0.12,'square',0.05);setTimeout(()=>sfx(523,0.16,'square',0.05),120);
 await sleep(Math.max(900,sw.wait));planIntents();G.mode='player';updatePanel()}
-async function roundClear(){G.mode='busy';const kind=G.kind;const rew=4+G.depth+(kind==='elite'?4:kind==='boss'?10:0);G.gold+=rew;G.goldBump=1;G.banner={text:kind==='boss'?'보스 격파!':'전투 승리',sub:'+'+rew+' 골드',t0:performance.now(),dur:1300};
+async function roundClear(){G.mode='busy';const kind=G.kind;let rew=4+G.depth+(kind==='elite'?4:kind==='boss'?10:0);if(kind!=='fight'&&has('ugold'))rew*=2;G.gold+=rew;G.goldBump=1;const sl=kind==='boss'?6:kind==='elite'?3:1;gainSoul(sl);G.banner={text:kind==='boss'?'보스 격파!':'전투 승리',sub:'+'+rew+' 골드 · 영혼 +'+sl,t0:performance.now(),dur:1300};
 for(const p of mine()){setTimeout(()=>{wobble(p,0.7,500)},Math.random()*250)}
 [523,659,784,1047].forEach((fq,i)=>setTimeout(()=>sfx(fq,0.16,'square',0.05),i*110));updatePanel('승리!');await sleep(1250);
 G.pending.push(kind==='fight'?'*a':'*e');await processCards();
@@ -439,7 +470,7 @@ function showOv(html){ov.innerHTML=html;ov.hidden=false;ov.classList.remove('in'
 function closeOv(){return new Promise(r=>{ov.classList.remove('in');ov.classList.add('out');setTimeout(()=>{ov.hidden=true;ov.innerHTML='';ov.classList.remove('out');r()},RM?60:270)})}
 
 async function processCards(){while(G.pending.length){const it=G.pending.shift();if(it[0]==='*'){const mr=it==='*e'?1:it==='*L'?2:0;await pickCard('a',true,mr,it)}else await pickCard(it,false,0)}}
-function rollCards(t,rw,mr){const ok=c=>!G.cards.has(c.id)&&(!c.req||G.cards.has(c.req));const types=new Set(mine().map(p=>p.t));let pool=rw?CARDS.filter(c=>ok(c)&&(c.t==='a'||types.has(c.t))):CARDS.filter(c=>c.t===t&&ok(c));if(mr){const hi=pool.filter(c=>c.rar>=mr);if(hi.length)pool=hi;else{const mid=pool.filter(c=>c.rar>=1);if(mid.length)pool=mid}}const W=[6,3,1];const out=[];const N=rw&&has('gloot')?4:3;
+function rollCards(t,rw,mr){const ok=c=>!G.cards.has(c.id)&&(!c.req||G.cards.has(c.req))&&(!c.lock||hasU('card_'+c.id));const types=new Set(mine().map(p=>p.t));let pool=rw?CARDS.filter(c=>ok(c)&&(c.t==='a'||types.has(c.t))):CARDS.filter(c=>c.t===t&&ok(c));if(mr){const hi=pool.filter(c=>c.rar>=mr);if(hi.length)pool=hi;else{const mid=pool.filter(c=>c.rar>=1);if(mid.length)pool=mid}}const W=[6,3,1];const out=[];const N=rw&&has('gloot')?4:3;
 while(out.length<N&&pool.length){let tot=pool.reduce((s,c)=>s+W[c.rar],0),r=Math.random()*tot,i=0;for(;i<pool.length;i++){r-=W[pool[i].rar];if(r<=0)break}out.push(pool.splice(Math.min(i,pool.length-1),1)[0])}
 while(out.length<N){const gv=6+G.round*2;out.push({id:'gold'+out.length,t,rar:0,name:'금화 주머니',desc:'골드를 '+gv+' 받아요.',gold:gv})}return out}
 function pickCard(t,rw,mr,tag){return new Promise(res=>{const cs=rollCards(t,rw,mr);let sel=-1,done=false;const cw=((sheetW()-28-16)/3-18)/SC;
@@ -472,8 +503,8 @@ const life=document.getElementById('life');if(life)life.onclick=()=>{if(G.gold<1
 document.getElementById('next').onclick=async()=>{sfx(440,0.1,'square',0.04);await closeOv();res()}};render()})}
 
 function bestRound(){try{return +(localStorage.getItem('mg_best')||0)}catch(e){return 0}}
-function statsHtml(){return `<div class="rules">${pimg('잡은 적 '+(G.kills||0)+'마리',14,'#d6d6de')}${pimg('최고 콤보 x'+(G.bestCombo||0),14,'#f0c040')}${pimg('보스 격파 '+(G.bossKills||0)+' / 3',14,'#ff8a7a')}${pimg('받은 축복 '+G.cards.size+'개',14,'#cfe0ff')}</div>`}
-async function victory(){G.mode='over';G.inspect=null;G.sel=null;updatePanel();try{localStorage.setItem('mg_win',String((+(localStorage.getItem('mg_win')||0))+1))}catch(e){}
+function statsHtml(){return `<div class="rules">${pimg('이번 판 영혼 +'+(G.soulsRun||0)+' (모은 영혼 '+META.souls+')',15,'#cfe0ff')}${pimg('잡은 적 '+(G.kills||0)+'마리',14,'#d6d6de')}${pimg('최고 콤보 x'+(G.bestCombo||0),14,'#f0c040')}${pimg('보스 격파 '+(G.bossKills||0)+' / 3',14,'#ff8a7a')}${pimg('받은 축복 '+G.cards.size+'개',14,'#cfe0ff')}</div>`}
+async function victory(){G.mode='over';gainSoul(10);G.inspect=null;G.sel=null;updatePanel();try{localStorage.setItem('mg_win',String((+(localStorage.getItem('mg_win')||0))+1))}catch(e){}
 [523,659,784,1047,1319].forEach((fq,i)=>setTimeout(()=>sfx(fq,0.22,'square',0.05),i*120));for(const p of mine())setTimeout(()=>wobble(p,0.9,600),Math.random()*400);
 G.banner={text:'정복 완료!',sub:'검은 왕좌를 무너뜨렸어요',t0:performance.now(),dur:2200};await sleep(2000);await blinds(1,600);
 showOv(`<div class="sheet"><div class="logo">${pimg('VICTORY',32,'#f0c040',{font:FP,ol:2})}</div>${pimg('3막의 보스를 모두 쓰러뜨렸어요',16,'#ece8de')}${statsHtml()}<div class="row"><button class="ghost" id="home">${pimg('처음으로',15,'#b8b8c4')}</button><button class="primary" id="endless">${pimg('무한 모드로 계속',15,'#ffffff')}</button></div></div>`);
@@ -481,13 +512,21 @@ document.getElementById('home').onclick=async()=>{await closeOv();newGame();G.mo
 document.getElementById('endless').onclick=async()=>{await closeOv();G.endless=true;G.act=4;genMap();openMapView()}}
 async function gameOver(){G.mode='over';const best=Math.max(bestRound(),G.depth||1);try{localStorage.setItem('mg_best',best)}catch(e){}
 updatePanel();[392,330,262,196].forEach((fq,i)=>setTimeout(()=>sfx(fq,0.3,'triangle',0.05),i*180));await sleep(600);await blinds(1,700);
-showOv(`<div class="sheet"><div class="logo">${pimg('GAME',32,'#ece8de',{font:FP,ol:2})}${pimg('OVER',32,'#e0483d',{font:FP,ol:2})}</div>${pimg((G.act>3?'무한의 탑 ':G.act+'막 ')+Math.max(1,G.floor)+'층에서 쓰러졌어요',16,'#ece8de')}${statsHtml()}${pimg('최고 기록 '+(best>12?'무한의 탑 '+(best-12)+'층':Math.ceil(best/4)+'막 '+(((best-1)%4)+1)+'층'),13,'#8c8c99')}<button class="primary" id="again">${pimg('다시 하기',16,'#ffffff')}</button></div>`);
-document.getElementById('again').onclick=async()=>{await closeOv();newGame();genMap();openMapView()}}
+showOv(`<div class="sheet"><div class="logo">${pimg('GAME',32,'#ece8de',{font:FP,ol:2})}${pimg('OVER',32,'#e0483d',{font:FP,ol:2})}</div>${pimg((G.act>3?'무한의 탑 ':G.act+'막 ')+Math.max(1,G.floor)+'층에서 쓰러졌어요',16,'#ece8de')}${statsHtml()}${pimg('최고 기록 '+(best>12?'무한의 탑 '+(best-12)+'층':Math.ceil(best/4)+'막 '+(((best-1)%4)+1)+'층'),13,'#8c8c99')}<div class="row"><button class="ghost" id="home">${pimg('처음으로',15,'#b8b8c4')}</button><button class="primary" id="again">${pimg('다시 하기',16,'#ffffff')}</button></div></div>`);document.getElementById('home').onclick=async()=>{await closeOv();newGame();G.mode='title';G.view='board';updatePanel();titleScreen()};
+document.getElementById('again').onclick=async()=>{await closeOv();startRun()}}
 
+function openAltar(){const render=()=>{const secs=[['army','시작 군대'],['bonus','시작 보너스'],['map','지도'],['card','새 전설 축복']];
+const row=u=>{const own=hasU(u.id),selA=u.sec==='army'&&META.army===u.id&&own,can=META.souls>=u.cost;return `<button class="item" data-u="${u.id}" ${(!own&&!can)||(own&&u.sec!=='army')?'disabled':''}><span class="nm">${pimg(u.name,15,own?'#ece8de':'#cfcfd6')}${pimg(u.desc,11,'#8c8c99')}</span>${own?(u.sec==='army'?pimg(selA?'선택됨':'고르기',13,selA?'#f0c040':'#b8b8c4'):pimg('보유',13,'#5fbf6a')):pimg(u.cost+' 영혼',13,can?'#cfe0ff':'#6e6e7a')}</button>`};
+ov.innerHTML=`<div class="sheet"><img src="${nodeIcon('event')}" alt="" style="width:40px;image-rendering:pixelated">${pimg('영혼의 제단',24,'#ece8de',{ol:2})}${pimg('모은 영혼 '+META.souls+' · 지금까지 '+(META.total||0),14,'#cfe0ff')}
+<div class="blist" style="max-height:56vh">${secs.map(([k,t])=>`<div class="bgrp"><div class="bhead">${pimg(t,15,'#f0c040')}</div>${k==='army'?`<button class="item" data-u="basic"><span class="nm">${pimg('기본 군대',15,'#ece8de')}${pimg('킹 · 나이트 · 비숍 · 폰 2로 시작해요.',11,'#8c8c99')}</span>${pimg(META.army==='basic'||!hasU(META.army)?'선택됨':'고르기',13,META.army==='basic'||!hasU(META.army)?'#f0c040':'#b8b8c4')}</button>`:''}${UNL.filter(u=>u.sec===k).map(row).join('')}</div>`).join('')}</div>
+<button class="primary" id="back">${pimg('돌아가기',16,'#ffffff')}</button></div>`;
+ov.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const id=b.dataset.u;if(id==='basic'){META.army='basic';saveMeta();sfx(520,0.05,'square',0.03);return render()}const u=UNL.find(x=>x.id===id);if(hasU(id)){if(u.sec==='army'){META.army=id;saveMeta();sfx(520,0.05,'square',0.03)}return render()}if(META.souls<u.cost)return;META.souls-=u.cost;META.unl.push(id);if(u.sec==='army')META.army=id;saveMeta();sfx(880,0.25,'triangle',0.06,1.5);render()});
+document.getElementById('back').onclick=async()=>{sfx(440,0.08,'square',0.03);await closeOv();titleScreen()}};
+showOv('<div class="sheet"></div>');render()}
 function titleScreen(){const mw=(sheetW()-28-24)/SC;
 const rules=[['흰 말을 눌러서 체스 규칙대로 움직여요.','#d6d6de'],['적을 쓰러뜨리면 같은 말이 한 번 더 움직여요. 이어 잡을수록 콤보! (때리기만 하면 턴이 끝나요)','#f0c040'],['빨간 칸은 적이 다음에 오는 곳이에요. 거기 있으면 잡혀요.','#ff8a7a'],['킹이 잡히거나 적 폰이 맨 아래에 닿으면 목숨이 줄어요.','#d6d6de'],['레벨 업과 전투 승리 때 축복 카드를 골라요.','#d6d6de'],['지도에서 길을 골라 올라가요. 3막의 보스를 쓰러뜨리면 승리!','#cfe0ff']];
-showOv(`<div class="sheet"><div class="logo">${pimg('MONO',32,'#ece8de',{font:FP,ol:2})}${pimg('GAMBIT',32,'#f0c040',{font:FP,ol:2})}</div>${pimg('끝없이 내려오는 검은 군대를 체스말로 막아요',14,'#8c8c99',{maxW:mw,align:'center'})}<div class="rules">${rules.map(r=>pimg('· '+r[0],14,r[1],{maxW:mw})).join('')}</div><button class="primary" id="go">${pimg('시작',18,'#ffffff')}</button></div>`);
-document.getElementById('go').onclick=async()=>{sfx(440,0.1,'square',0.04);await closeOv();newGame();genMap();openMapView()}}
+showOv(`<div class="sheet"><div class="logo">${pimg('MONO',32,'#ece8de',{font:FP,ol:2})}${pimg('GAMBIT',32,'#f0c040',{font:FP,ol:2})}</div>${pimg('끝없이 내려오는 검은 군대를 체스말로 막아요',14,'#8c8c99',{maxW:mw,align:'center'})}<div class="rules">${rules.map(r=>pimg('· '+r[0],14,r[1],{maxW:mw})).join('')}</div><div class="row"><button class="ghost" id="altar">${pimg('영혼의 제단 · '+META.souls,15,'#cfe0ff')}</button><button class="primary" id="go">${pimg('시작',18,'#ffffff')}</button></div>${pimg('시작 군대: '+((UNL.find(u=>u.id===META.army&&hasU(u.id))||{name:'기본 군대'}).name),12,'#8c8c99')}</div>`);document.getElementById('altar').onclick=async()=>{await closeOv();openAltar()};
+document.getElementById('go').onclick=async()=>{sfx(440,0.1,'square',0.04);await closeOv();startRun()}}
 
 /* 돌판 패널 상태 */
 function updatePanel(msg){if(!G)return;let main,sub='';
@@ -503,7 +542,7 @@ function pieceHit(px,py){const list=pieces.slice().sort((a,b)=>b.r-a.r);for(cons
 function tileAt(px,py){const q=Math.floor((px-OX)/TW),r=Math.floor((py-TOP)/TH);return inb(q,r)?{q,r}:null}
 function toLogical(ev){const rc=cv.getBoundingClientRect();return[(ev.clientX-rc.left)/rc.width*LW,(ev.clientY-rc.top)/rc.height*LH]}
 cv.addEventListener('pointerdown',ev=>{if(!G)return;const[px,py]=toLogical(ev);
-if(py>=PY){if(inRect(px,py,BTN)&&btnEnabled()){G.btnDown=true;sfx(300,0.04,'square',0.03)}else{for(const r of G.pillRects){if(inRect(px,py,r)){G.pillSel=r.i;G.pillT=performance.now();sfx(640,0.04,'square',0.03);break}}}return}
+if(py>=PY){if(G.view==='map'&&G.mode==='map'&&G.rerollRect&&inRect(px,py,G.rerollRect)){const n=G.map.nodes[G.mapSel];const ts=['fight','elite','shop','rest','event'].filter(t=>t!==n.t);n.t=ts[Math.floor(Math.random()*ts.length)];G.rerollLeft--;G.mapSelT=performance.now();sfx(990,0.2,'triangle',0.05,1.4);updatePanel();return}if(inRect(px,py,BTN)&&btnEnabled()){G.btnDown=true;sfx(300,0.04,'square',0.03)}else{for(const r of G.pillRects){if(inRect(px,py,r)){G.pillSel=r.i;G.pillT=performance.now();sfx(640,0.04,'square',0.03);break}}}return}
 if(G.view==='map'){if(G.mode==='map')mapTap(px,py);return}
 if(G.mode!=='player')return;
 let tl=tileAt(px,py);const ph=pieceHit(px,py);
@@ -643,9 +682,11 @@ function drawMapInfo(g,now){const y0=PY+52;
 if(G.mapSel!=null){const n=G.map.nodes[G.mapSel],av=availNodes().includes(n.id),isB=n.t==='boss',br=ROLE[BOSS[(G.act-1)%3].role];const ck=Math.min(1,(now-(G.mapSelT||0))/240);
 well(g,14,y0,62,86);g.save();g.globalAlpha=ck;if(isB){const bk=bossKey(),bw=SP[bk][0].length*2.4,bh=SP[bk].length*2.4;spr(g,bk,45-bw/2,y0+80-bh,2.4,PAL.kb)}else pixIc(g,n.t,21,y0+19,3);
 dtext(g,isB?'보스 · '+br.name:NODE[n.t].name,84,y0-1,17,NCOL[n.t]);dtext(g,isB?br.desc:NODE[n.t].desc,84,y0+24,13,'#cfcfd6',{maxW:262});
-dtext(g,n.done?'지나온 칸이에요':av?'한 번 더 누르거나 출발을 눌러요':'지금은 갈 수 없어요',84,y0+70,12,n.done?'#8c8c99':av?'#f0c040':'#e0483d');g.restore();return}
+dtext(g,n.done?'지나온 칸이에요':av?'한 번 더 누르거나 출발을 눌러요':'지금은 갈 수 없어요',84,y0+70,12,n.done?'#8c8c99':av?'#f0c040':'#e0483d');g.restore();
+G.rerollRect=null;if(G.rerollLeft>0&&!n.done&&!isB&&n.f>G.floor){const r2={x:262,y:y0+60,w:84,h:22};G.rerollRect=r2;g.fillStyle='#000';g.fillRect(r2.x-2,r2.y-2,r2.w+4,r2.h+4);g.fillStyle='#24406e';g.fillRect(r2.x,r2.y,r2.w,r2.h);g.fillStyle='#4a86e8';g.fillRect(r2.x,r2.y,r2.w,2);dtext(g,'다시 뽑기',r2.x+r2.w/2,r2.y+r2.h/2+1,13,'#ffffff',{anchor:'center',mid:true})}return}
+G.rerollRect=null;
 ['fight','elite','shop','rest','event'].forEach((t,i)=>{const cx=48+i*66,x=cx-20,y=y0;well(g,x,y,40,40);pixIc(g,t,x+4,y+4,2);dtext(g,NODE[t].name.replace(' 전투',''),cx,y+54,12,NCOL[t],{anchor:'center',mid:true})});
-dtext(g,'군대 '+mine().length+'명 · 받은 축복 '+G.cards.size+'개 · 골드 '+G.gold,180,y0+76,12,'#8c8c99',{anchor:'center',mid:true})}
+dtext(g,'군대 '+mine().length+'명 · 축복 '+G.cards.size+'개 · 영혼 '+META.souls+(G.rerollLeft>0?' · 다시 뽑기 1번':''),180,y0+76,12,'#8c8c99',{anchor:'center',mid:true})}
 
 let last=performance.now();
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(50,now-last);last=now;const frozen=G&&now<G.freezeUntil;
