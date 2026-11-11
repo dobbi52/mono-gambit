@@ -614,6 +614,7 @@ for(let f=1;f<=4;f++){const fl=nodes.filter(n=>n.f===f);if(f===1){fl.forEach(n=>
 const CAP={shop:2,rest:2,event:2},cnt=t=>nodes.filter(n=>n.t===t).length,roll2=()=>{for(let k=0;k<12;k++){const t=roll();if(!CAP[t]||cnt(t)<CAP[t])return t}return Math.random()<0.7?'fight':'elite'};
 fl.forEach(n=>{n.t=null;let t=roll2();if(fl.some(o=>o.t===t)&&Math.random()<0.6){n.t=null;t=roll2()}n.t=t});
 if(f===4&&!fl.some(n=>n.t==='shop'||n.t==='rest')){const pick=fl[Math.floor(Math.random()*fl.length)];let ok=['shop','rest'].filter(t=>cnt(t)<2);if(!ok.length){const t=Math.random()<0.5?'shop':'rest',old=nodes.find(n=>n.t===t&&n.f<4);if(old)old.t='fight';ok=[t]}pick.t=ok[Math.floor(Math.random()*ok.length)]}}
+if(!nodes.some(n=>n.t==='shop')){const c=nodes.filter(n=>n.f>=2&&n.f<=4&&n.t!=='rest'),c2=c.length?c:nodes.filter(n=>n.f>=2&&n.f<=4);c2[Math.floor(Math.random()*c2.length)].t='shop'}
 const edges=[],frac=n=>n.n===1?0.5:n.j/(n.n-1);
 for(let f=0;f<5;f++){const A=nodes.filter(n=>n.f===f),B=nodes.filter(n=>n.f===f+1);for(const a of A){let t=B.filter(b=>Math.abs(frac(b)-frac(a))<=0.5);if(!t.length)t=[B.reduce((m,b)=>Math.abs(frac(b)-frac(a))<Math.abs(frac(m)-frac(a))?b:m)];for(const b of t)edges.push([a.id,b.id])}
 for(const b of B)if(!edges.some(e=>e[1]===b.id)){const a=A.reduce((m,x)=>Math.abs(frac(x)-frac(b))<Math.abs(frac(m)-frac(b))?x:m);edges.push([a.id,b.id])}}
