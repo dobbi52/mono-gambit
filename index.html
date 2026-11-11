@@ -507,14 +507,15 @@ function freeSpot(rows){const cols=[2,3,1,4,0,5];for(const r of rows)for(const q
 
 /* 갈림길 지도 */
 const NODE={fight:{name:'전투',desc:'적을 모두 쓰러뜨려요. 끝나면 축복 카드를 골라요.'},elite:{name:'엘리트 전투',desc:'강한 적이 더 많이 나와요. 깨면 희귀 이상 축복 확정!'},shop:{name:'상점',desc:'골드로 새 말과 목숨을 사요.'},rest:{name:'쉼터',desc:'목숨 1 회복, 또는 말 한 종류 레벨 +1 중에 골라요.'},event:{name:'사건',desc:'무슨 일이 일어날지 몰라요. 고르는 건 내 몫이에요.'}};
-const MAPY=[434,360,282,204,128];
-function genMap(){const counts=[1,2+(Math.random()<0.4?1:0),3,2+(Math.random()<0.3?1:0),1],nodes=[];
-counts.forEach((n,f)=>{const sp=n===1?0:n===2?150:108;for(let j=0;j<n;j++){const mid=f>0&&f<4;nodes.push({id:nodes.length,f,j,n,x:Math.round(180+(j-(n-1)/2)*sp+(mid?(Math.random()-0.5)*14:0)),y:MAPY[f]+(mid?Math.round((Math.random()-0.5)*10):0),t:f===0?'start':f===4?'boss':null,done:f===0})}});
+const MAPY=[434,373,312,251,190,128];
+function genMap(){const counts=[1,2+(Math.random()<0.4?1:0),3,2+(Math.random()<0.6?1:0),2+(Math.random()<0.3?1:0),1],nodes=[];
+counts.forEach((n,f)=>{const sp=n===1?0:n===2?150:108;for(let j=0;j<n;j++){const mid=f>0&&f<5;nodes.push({id:nodes.length,f,j,n,x:Math.round(180+(j-(n-1)/2)*sp+(mid?(Math.random()-0.5)*14:0)),y:MAPY[f]+(mid?Math.round((Math.random()-0.5)*10):0),t:f===0?'start':f===5?'boss':null,done:f===0})}});
 const W=G.asc>=1?[['fight',28],['elite',27],['shop',15],['rest',15],['event',15]]:[['fight',40],['elite',15],['shop',15],['rest',15],['event',15]],roll=()=>{let x=Math.random()*100;for(const w of W){x-=w[1];if(x<=0)return w[0]}return 'fight'};
-for(let f=1;f<=3;f++){const fl=nodes.filter(n=>n.f===f);fl.forEach(n=>{let t=roll();if(f===1&&t==='elite')t='fight';if(fl.some(o=>o.t===t)&&Math.random()<0.6)t=roll();n.t=t});
-if(f===1&&!fl.some(n=>n.t==='fight'))fl[0].t='fight';if(f===3&&!fl.some(n=>n.t==='shop'||n.t==='rest'))fl[fl.length-1].t=Math.random()<0.5?'shop':'rest'}
+for(let f=1;f<=4;f++){const fl=nodes.filter(n=>n.f===f);if(f===1){fl.forEach(n=>{n.t=(G.act>1&&Math.random()<0.2)?'event':'fight'});if(!fl.some(n=>n.t==='fight'))fl[0].t='fight';continue}
+fl.forEach(n=>{let t=roll();if(fl.some(o=>o.t===t)&&Math.random()<0.6)t=roll();n.t=t});
+if(f===4&&!fl.some(n=>n.t==='shop'||n.t==='rest'))fl[Math.floor(Math.random()*fl.length)].t=Math.random()<0.5?'shop':'rest'}
 const edges=[],frac=n=>n.n===1?0.5:n.j/(n.n-1);
-for(let f=0;f<4;f++){const A=nodes.filter(n=>n.f===f),B=nodes.filter(n=>n.f===f+1);for(const a of A){let t=B.filter(b=>Math.abs(frac(b)-frac(a))<=0.5);if(!t.length)t=[B.reduce((m,b)=>Math.abs(frac(b)-frac(a))<Math.abs(frac(m)-frac(a))?b:m)];for(const b of t)edges.push([a.id,b.id])}
+for(let f=0;f<5;f++){const A=nodes.filter(n=>n.f===f),B=nodes.filter(n=>n.f===f+1);for(const a of A){let t=B.filter(b=>Math.abs(frac(b)-frac(a))<=0.5);if(!t.length)t=[B.reduce((m,b)=>Math.abs(frac(b)-frac(a))<Math.abs(frac(m)-frac(a))?b:m)];for(const b of t)edges.push([a.id,b.id])}
 for(const b of B)if(!edges.some(e=>e[1]===b.id)){const a=A.reduce((m,x)=>Math.abs(frac(x)-frac(b))<Math.abs(frac(m)-frac(b))?x:m);edges.push([a.id,b.id])}}
 G.bossOf=G.bossOf||{};if(!G.bossOf[G.act])G.bossOf[G.act]=G.act<=3?BPOOL[G.act-1][Math.random()<0.5?0:1]:BALL[Math.floor(Math.random()*6)];G.map={nodes,edges};G.mapPos=0;G.path=[0];G.floor=0;G.mapSel=null;const c=nodes[0];G.mk={x:c.x,y:c.y};mapBgKey=''}
 function availNodes(){return G.map.edges.filter(e=>e[0]===G.mapPos).map(e=>e[1])}
@@ -525,7 +526,7 @@ G.mode='map';updatePanel()}
 function mapTap(px,py){for(const n of G.map.nodes){if(n.f===0)continue;const r=n.t==='boss'?30:22;if(Math.hypot(px-n.x,py-n.y)<=r){const av=availNodes().includes(n.id);if(G.mapSel===n.id&&av){goNode(n.id);return}G.mapSel=n.id;G.mapSelT=performance.now();sfx(av?620:300,0.05,'square',0.03);updatePanel();return}}G.mapSel=null;updatePanel()}
 async function goNode(id){if(G.mode!=='map'||!availNodes().includes(id))return;G.mode='busy';const a=G.map.nodes[G.mapPos],b=G.map.nodes[id];sfx(360,0.08,'triangle',0.04,1.4);updatePanel('이동 중…');
 await anim(520,(e,k)=>{G.mk={x:a.x+(b.x-a.x)*e,y:a.y+(b.y-a.y)*e-Math.sin(k*Math.PI)*16}},'inout');thud(0.06);
-b.done=true;G.mapPos=id;G.path.push(id);G.floor=b.f;G.depth=(G.act-1)*4+b.f;G.mapSel=null;await sleep(220);enterNode(b)}
+b.done=true;G.mapPos=id;G.path.push(id);G.floor=b.f;G.depth=(G.act-1)*4+Math.min(4,b.f);G.prog=(G.act-1)*5+b.f;G.mapSel=null;await sleep(220);enterNode(b)}
 async function enterNode(n){if(n.t==='shop'||n.t==='rest'||n.t==='event')gainSoul(1);if(n.t==='fight'||n.t==='elite'||n.t==='boss'){await blinds(1,300);return startRound(n.t)}
 if(n.t==='shop')await openShop();else if(n.t==='rest')await openRest();else await openEvent();
 await flushIntros();G.mode='map';updatePanel()}
@@ -596,7 +597,7 @@ ov.querySelectorAll('.shop [data-i]').forEach(b=>b.onclick=()=>{const s=SHOP[+b.
 const life=document.getElementById('life');if(life)life.onclick=()=>{if(G.gold<lifeCost())return;G.gold-=lifeCost();G.lives++;sfx(600,0.12,'square',0.05,1.4);updatePanel();render()};
 document.getElementById('next').onclick=async()=>{sfx(440,0.1,'square',0.04);await closeOv();res()}};render()})}
 
-function bestRound(){try{return +(localStorage.getItem('mg_best')||0)}catch(e){return 0}}
+function bestRound(){try{return +(localStorage.getItem('mg_best2')||0)}catch(e){return 0}}
 function statsHtml(){return `<div class="rules">${G.asc||META.ascMax?pimg((G.asc?'도전 '+G.asc+'단계':'기본 난이도')+' · 최고 클리어 '+(META.ascClear||0)+'단계',14,'#ff8a7a'):''}${pimg('이번 판 영혼 +'+(G.soulsRun||0)+' (모은 영혼 '+META.souls+')',15,'#cfe0ff')}${pimg('잡은 적 '+(G.kills||0)+'마리',14,'#d6d6de')}${pimg('최고 콤보 x'+(G.bestCombo||0),14,'#f0c040')}${pimg('보스 격파 '+(G.bossKills||0)+' / 3',14,'#ff8a7a')}${pimg('받은 축복 '+G.cards.size+'개',14,'#cfe0ff')}</div>`}
 async function victory(){G.mode='over';gainSoul(10);{const pm=META.ascMax||0;if(G.asc>=pm&&pm<8){META.ascMax=pm+1;G.newAsc=META.ascMax}if(G.asc>=1&&G.asc>(META.ascClear||0)){META.ascClear=G.asc;gainSoul(G.asc*5)}saveMeta()}G.inspect=null;G.sel=null;updatePanel();try{localStorage.setItem('mg_win',String((+(localStorage.getItem('mg_win')||0))+1))}catch(e){}
 [523,659,784,1047,1319].forEach((fq,i)=>setTimeout(()=>sfx(fq,0.22,'square',0.05),i*120));for(const p of mine())setTimeout(()=>wobble(p,0.9,600),Math.random()*400);
@@ -604,9 +605,9 @@ G.banner={text:'정복 완료!',sub:'검은 왕좌를 무너뜨렸어요',t0:per
 showOv(`<div class="sheet"><div class="logo">${pimg('VICTORY',32,'#f0c040',{font:FP,ol:2})}</div>${pimg('3막의 보스를 모두 쓰러뜨렸어요',16,'#ece8de')}${G.newAsc?pimg('도전 '+G.newAsc+'단계가 열렸어요!',16,'#f0c040',{ol:2}):''}${statsHtml()}<div class="row"><button class="ghost" id="home">${pimg('처음으로',15,'#b8b8c4')}</button><button class="primary" id="endless">${pimg('무한 모드로 계속',15,'#ffffff')}</button></div></div>`);
 document.getElementById('home').onclick=async()=>{await closeOv();newGame();G.mode='title';G.view='board';updatePanel();titleScreen()};
 document.getElementById('endless').onclick=async()=>{await closeOv();G.endless=true;G.act=4;genMap();openMapView()}}
-async function gameOver(){G.mode='over';const best=Math.max(bestRound(),G.depth||1);try{localStorage.setItem('mg_best',best)}catch(e){}
+async function gameOver(){G.mode='over';const best=Math.max(bestRound(),G.prog||1);try{localStorage.setItem('mg_best2',best)}catch(e){}
 updatePanel();[392,330,262,196].forEach((fq,i)=>setTimeout(()=>sfx(fq,0.3,'triangle',0.05),i*180));await sleep(600);await blinds(1,700);
-showOv(`<div class="sheet"><div class="logo">${pimg('GAME',32,'#ece8de',{font:FP,ol:2})}${pimg('OVER',32,'#e0483d',{font:FP,ol:2})}</div>${pimg((G.act>3?'무한의 탑 ':G.act+'막 ')+Math.max(1,G.floor)+'층에서 쓰러졌어요',16,'#ece8de')}${statsHtml()}${pimg('최고 기록 '+(best>12?'무한의 탑 '+(best-12)+'층':Math.ceil(best/4)+'막 '+(((best-1)%4)+1)+'층'),13,'#8c8c99')}<div class="row"><button class="ghost" id="home">${pimg('처음으로',15,'#b8b8c4')}</button><button class="primary" id="again">${pimg('다시 하기',16,'#ffffff')}</button></div></div>`);document.getElementById('home').onclick=async()=>{await closeOv();newGame();G.mode='title';G.view='board';updatePanel();titleScreen()};
+showOv(`<div class="sheet"><div class="logo">${pimg('GAME',32,'#ece8de',{font:FP,ol:2})}${pimg('OVER',32,'#e0483d',{font:FP,ol:2})}</div>${pimg((G.act>3?'무한의 탑 ':G.act+'막 ')+Math.max(1,G.floor)+'층에서 쓰러졌어요',16,'#ece8de')}${statsHtml()}${pimg('최고 기록 '+(best>15?'무한의 탑 '+(best-15)+'층':Math.ceil(best/5)+'막 '+(((best-1)%5)+1)+'층'),13,'#8c8c99')}<div class="row"><button class="ghost" id="home">${pimg('처음으로',15,'#b8b8c4')}</button><button class="primary" id="again">${pimg('다시 하기',16,'#ffffff')}</button></div></div>`);document.getElementById('home').onclick=async()=>{await closeOv();newGame();G.mode='title';G.view='board';updatePanel();titleScreen()};
 document.getElementById('again').onclick=async()=>{await closeOv();startRun()}}
 
 function openAltar(){const render=()=>{const secs=[['army','시작 군대'],['bonus','시작 보너스'],['map','지도'],['card','새 전설 축복']];
