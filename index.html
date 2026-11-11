@@ -87,6 +87,7 @@ button.big{width:100%;padding:9px 0 12px;animation:tgo 2.2s ease-in-out infinite
 @keyframes tgo{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
 .trow{display:flex;gap:6px;width:100%}.trow button{flex:1;padding:8px 4px 11px}
 .acc{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:0 2px}.acc button{padding:4px 10px 7px}.acc[hidden]{display:none}.accInfo{display:flex;flex-direction:column;align-items:flex-start;min-width:0;text-align:left}.accInfo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+.mcol{display:flex;flex-direction:column;gap:8px;width:100%;max-width:240px}.mcol button{width:100%;padding:10px 0 13px}
 .tmenu .ascRow{width:100%;justify-content:space-between;background:rgba(20,12,14,.85);border:2px solid #000;padding:4px}
 .ascLbl{display:flex;flex-direction:column;align-items:center;gap:2px}button.sm{padding:6px 10px 9px}
 .asc{display:flex;flex-direction:column;gap:6px;width:100%;align-items:center}.ascRow{display:flex;align-items:center;gap:12px}.ascRow button{padding:6px 12px 9px}.ascList{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;width:100%;background:#1a1012;border:2px solid #000;box-shadow:inset 0 3px 0 #0c0c0f;padding:8px 10px}
@@ -655,6 +656,14 @@ const bye=async f=>{ov.classList.remove('tov');await closeOv();f()};
 document.getElementById('altar').onclick=()=>bye(openAltar);document.getElementById('codex').onclick=()=>bye(openCodex);document.getElementById('rules').onclick=()=>bye(openRules);
 {const el=document.getElementById('asc');if(el)el.addEventListener('click',ev=>{const b=ev.target.closest('[data-d]');if(!b||b.disabled)return;META.ascSel=Math.max(0,Math.min(META.ascMax,(META.ascSel||0)+(+b.dataset.d)));saveMeta();sfx(META.ascSel?440+META.ascSel*40:440,0.06,'square',0.04);el.innerHTML=ascMini()})}
 document.getElementById('go').onclick=async()=>{sfx(440,0.1,'square',0.04);ov.classList.remove('tov');G.view='board';await closeOv();startRun()}}
+function openMenu(){const back=G.mode;G.mode='busy';const where=(G.act>3?'무한의 탑 ':G.act+'막 ')+Math.max(1,G.floor||1)+'층';
+const main=()=>{showOv(`<div class="sheet">${pimg('잠깐 멈춤',20,'#ece8de',{ol:2})}${pimg(where+(G.asc?' · 도전 '+G.asc+'단계':'')+' · 영혼 '+META.souls,13,'#8c8c99')}<div class="mcol"><button class="primary" id="m_go">${pimg('계속하기',16,'#fff')}</button><button class="ghost" id="m_new">${pimg('새 게임',15,'#ece8de')}</button><button class="ghost" id="m_home">${pimg('첫 화면으로',15,'#b8b8c4')}</button></div></div>`);
+document.getElementById('m_go').onclick=async()=>{sfx(440,0.06,'square',0.03);await closeOv();G.mode=back};
+document.getElementById('m_new').onclick=()=>ask('새 게임을 시작할까요?','지금 하던 판은 사라져요. 모은 영혼과 해금은 그대로예요.','새로 시작',async()=>{await closeOv();anims.length=0;parts.length=0;dead.length=0;startRun()});
+document.getElementById('m_home').onclick=()=>ask('첫 화면으로 갈까요?','지금 하던 판은 사라져요. 모은 영혼과 해금은 그대로예요.','첫 화면으로',async()=>{await closeOv();anims.length=0;parts.length=0;dead.length=0;newGame();G.mode='title';G.view='board';updatePanel();titleScreen()})};
+const ask=(t,d,yes,fn)=>{sfx(330,0.06,'square',0.03);showOv(`<div class="sheet">${pimg(t,18,'#ece8de',{ol:2})}${pimg(d,13,'#b8b8c4',{maxW:(sheetW()-52)/SC,align:'center'})}<div class="row"><button class="ghost" id="m_no">${pimg('아니요',15,'#b8b8c4')}</button><button class="primary" id="m_yes">${pimg(yes,15,'#fff')}</button></div></div>`);
+document.getElementById('m_no').onclick=()=>{sfx(440,0.05,'square',0.03);main()};document.getElementById('m_yes').onclick=()=>{sfx(220,0.12,'square',0.04);fn()}};
+main()}
 function openRules(){const mw=(sheetW()-28-24)/SC,sel=Math.min(META.ascSel||0,META.ascMax||0);showOv(`<div class="sheet">${pimg('게임 방법',20,'#ece8de',{ol:2})}<div class="rules">${RULES.map(r=>pimg('· '+r[0],14,r[1],{maxW:mw})).join('')}</div>${sel?'<div class="ascList">'+pimg('도전 '+sel+'단계 규칙',13,'#ff8a7a')+ASC.slice(1,sel+1).map((a,i)=>pimg((i+1)+'. '+a.n+' · '+a.d,12,i+1===sel?'#f0c040':'#b8b8c4',{maxW:mw})).join('')+'</div>':''}<button class="primary" id="rok">${pimg('알겠어요',16,'#fff')}</button></div>`);document.getElementById('rok').onclick=async()=>{await closeOv();titleScreen()}}
 
 /* 돌판 패널 상태 */
@@ -671,6 +680,7 @@ function pieceHit(px,py){const list=pieces.slice().sort((a,b)=>b.r-a.r);for(cons
 function tileAt(px,py){const q=Math.floor((px-OX)/TW),r=Math.floor((py-TOP)/TH);return inb(q,r)?{q,r}:null}
 function toLogical(ev){const rc=cv.getBoundingClientRect();return[(ev.clientX-rc.left)/rc.width*LW,(ev.clientY-rc.top)/rc.height*LH]}
 cv.addEventListener('pointerdown',ev=>{if(!G)return;const[px,py]=toLogical(ev);
+if(G.view!=='title'&&inRect(px,py,{x:MENU.x-4,y:0,w:MENU.w+8,h:46})){if(G.mode==='player'||G.mode==='map'){G.menuDown=performance.now();sfx(520,0.05,'square',0.03);openMenu()}return}
 if(py>=PY){if(G.view==='map'&&G.mode==='map'&&G.rerollRect&&inRect(px,py,G.rerollRect)){const n=G.map.nodes[G.mapSel];const ts=['fight','elite','shop','rest','event'].filter(t=>t!==n.t);n.t=ts[Math.floor(Math.random()*ts.length)];G.rerollLeft--;G.mapSelT=performance.now();sfx(990,0.2,'triangle',0.05,1.4);updatePanel();return}if(inRect(px,py,BTN)&&btnEnabled()){G.btnDown=true;sfx(300,0.04,'square',0.03)}else{for(const r of G.pillRects){if(inRect(px,py,r)){G.pillSel=r.i;G.pillT=performance.now();sfx(640,0.04,'square',0.03);break}}}return}
 if(G.view==='map'){if(G.mode==='map')mapTap(px,py);return}
 if(G.mode!=='player')return;
@@ -753,7 +763,7 @@ if(p.side==='e'&&(p.role==='summon'||p.role==='b3')){const h=SP[p.t].length*S;fo
 const a=now/500;pxRing(g,cx,by-2,18+Math.round(Math.sin(a)*2),6,2,2,'rgba(236,232,222,0.35)')}
 if(p.side==='e'&&p.maxhp>1){const h=SP[sk(p)].length*S+(p.boss?14:0);for(let i=0;i<p.maxhp;i++){const x0=cx-p.maxhp*4+i*8,y0=by-h-lift-10;g.fillStyle='#000';g.fillRect(x0-1,y0-1,7,6);g.fillStyle=i<p.hp?'#e0483d':'#3a3a44';g.fillRect(x0,y0,5,4)}}}
 /* 위쪽 정보 띠: 금 리벳 석판 + 칸마다 움푹 들어간 홈, 내용은 홈 한가운데 */
-const HSL=[[24,80],[110,64],[180,96],[282,54]],HY=9,HH=28;
+const HSL=[[16,76],[98,58],[162,92],[260,50]],HY=9,HH=28,MENU={x:316,y:9,w:26,h:28};
 function hSlot(x,y,w,h){g0.fillStyle='#000';g0.fillRect(x-1,y-1,w+2,h+2);g0.fillStyle='#141418';g0.fillRect(x,y,w,h);g0.fillStyle='#0b0b0e';g0.fillRect(x,y,w,2);g0.fillStyle='#2c2c34';g0.fillRect(x,y+h-1,w,1)}
 let g0=null;
 function hHeart(g,x,y,on){const rows=[".##.##.","#######","#######","#######",".#####.","..###..","...#..."],s=2;g.fillStyle='#000';rows.forEach((r,j)=>{for(let i=0;i<7;i++)if(r[i]==='#')g.fillRect(x+(i-1)*s,y+(j-1)*s,3*s,3*s)});
@@ -768,7 +778,8 @@ for(const sl of HSL)hSlot(sl[0],HY,sl[1],HH);const mid=HY+HH/2;
 G.goldShown+=(G.gold-G.goldShown)*Math.min(1,rdt/110);if(Math.abs(G.gold-G.goldShown)<0.5)G.goldShown=G.gold;G.goldBump=Math.max(0,G.goldBump-rdt/260);
 {const [x,w]=HSL[1],gs=String(Math.round(G.goldShown)),nw=tw(gs,16,FP),tot=16+6+nw,x0=Math.round(x+w/2-tot/2),gb=1+G.goldBump*0.35;g.save();g.translate(x0+8,mid);g.scale(gb,gb);hCoin(g,-8,-8);g.restore();dtext(g,gs,x0+22,mid+1,16,G.goldBump>0.1?'#fff3c0':'#f0c040',{mid:true,font:FP})}
 {const [x,w]=HSL[2],hn=Math.min(5,Math.max(3,G.lives)),tot=hn*18-4;G.heartX0=Math.round(x+w/2-tot/2);for(let i=0;i<hn;i++)hHeart(g,G.heartX0+i*18,Math.round(mid-7+Math.sin(now/300+i)*0.6),i<G.lives)}
-{const [x,w]=HSL[3],es=String(enemies().length),nw=tw(es,16,FP),tot=15+6+nw,x0=Math.round(x+w/2-tot/2);spr(g,'p',x0,Math.round(mid-SP.p.length*1.05/2),1.05,PAL.k);dtext(g,es,x0+21,mid+1,16,'#ece8de',{mid:true,font:FP})}}
+{const [x,w]=HSL[3],es=String(enemies().length),nw=tw(es,16,FP),tot=15+6+nw,x0=Math.round(x+w/2-tot/2);spr(g,'p',x0,Math.round(mid-SP.p.length*1.05/2),1.05,PAL.k);dtext(g,es,x0+21,mid+1,16,'#ece8de',{mid:true,font:FP})}
+{const ok=G.mode==='player'||G.mode==='map',dn=G.menuDown&&performance.now()-G.menuDown<160;hSlot(MENU.x,MENU.y+(dn?1:0),MENU.w,MENU.h);const c=ok?'#ece8de':'#5a5a64';for(let i=0;i<3;i++){g.fillStyle='#000';g.fillRect(MENU.x+5,MENU.y+7+i*6+(dn?1:0),16,4);g.fillStyle=c;g.fillRect(MENU.x+6,MENU.y+8+i*6+(dn?1:0),14,2)}}}
 
 /* 지도 그리기 */
 const mapBg=document.createElement('canvas');let mapBgKey='';
