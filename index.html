@@ -93,6 +93,10 @@ b:["......##......",".....####.....","....##.###....","...##.#####...","...#.###
 r:["..##..##..##..","..##########..","...########...","....######....","....######....","....######....","....######....","....######....","....######....","...########...","...########...","..##########..",".############.",".############.","..##########.."],
 q:["......##......","..#..####..#..","..##.####.##..","..##########..","...########...","....######....",".....####.....","....######....",".....####.....",".....####.....",".....####.....","....######....","...########...","..##########..",".############.",".############.","..##########.."],
 k:["......##......",".....####.....","......##......","...########...","..##########..","..##########..","...########...","....######....",".....####.....","....######....",".....####.....",".....####.....","....######....","...########...","..##########..",".############.",".############.","..##########.."]};
+SP.p=[".....####.....","....######....","....######....",".....####.....","......##......",".....####.....","....######....","....######....","...########...","..##########..","..##########..","...########..."];
+SP.b=["......##......","......##......",".....####.....","....##.###....","...###.####...","...##.#####...","...#.######...","....######....",".....####.....","....######....",".....####.....",".....####.....",".....####.....","....######....","...########...","..##########..",".############.",".############.","..##########.."];
+SP.k=["......##......","......##......","....######....","....######....","......##......","......##......","...########...","..##########..","..##########..","...########...","....######....",".....####.....",".....####.....",".....####.....","....######....","...########...","..##########..",".############.",".############.","##############",".############."];
+SP.q=["......##......","..#..####..#..","..##.####.##..","..##########..","...########...","....######....",".....####.....","....######....",".....####.....",".....####.....",".....####.....",".....####.....","....######....","...########...","..##########..",".############.",".############.","##############",".############."];
 SP.B1=["........##........",".......####.......","......##.###......",".....######.......","....########......","...##########.....","..####.#######....","..############....",".#############....",".####..########...","..##...########...",".......#######....","......########....",".....#########....",".....########.....","....##########....","....##########....","...############...","..##############..",".################.",".################.","..##############.."];
 SP.B2=[".##..###..###..##.",".################.",".################.","..##############..","...############...","...####....####...","...###......###...","...###......###...","...####....####...","...############...","...############...","...############...","...############...","..##############..","..##############..",".################.",".################.","##################","##################",".################."];
 SP.B3=["..#...#...#...#..","..##.###.###.##..","..#############..","...###########...","....#########....","......#####......",".....#######.....","....###.#.###....",".....#######.....","......#####......",".......###.......",".....#######.....","....#########....","....#########....","...###########...","...###########...","..#############..",".###############.","#################","#################",".###############."];
@@ -263,6 +267,7 @@ const UNL=[
 {id:'bonus_gold',sec:'bonus',name:'든든한 지갑',desc:'처음 골드가 10 더 많아요.',cost:10},
 {id:'bonus_card',sec:'bonus',name:'출정의 축복',desc:'첫 전투 전에 축복 카드를 1장 골라요.',cost:20},
 {id:'bonus_life',sec:'bonus',name:'여분의 심장',desc:'목숨 하나를 더 갖고 시작해요.',cost:25},
+{id:'tactician',sec:'bonus',name:'전술가',desc:'전투마다 자리 바꾸기를 1번 더 해요.',cost:15},
 {id:'map_reroll',sec:'map',name:'점술가의 지도',desc:'판마다 한 번, 지도 칸 하나를 다시 뽑아요.',cost:25},
 {id:'card_ushadow',sec:'card',name:'그림자 기사',desc:'전설 축복이 카드에 나오기 시작해요.',cost:20},
 {id:'card_ulight',sec:'card',name:'태양의 비숍',desc:'전설 축복이 카드에 나오기 시작해요.',cost:20},
@@ -285,6 +290,12 @@ function lineupSpots(){const my=mine(),k=king(),ord={q:0,r:1,b:2,n:3,p:9};const 
 const back=[[1,7],[3,7],[0,7],[4,7],[5,7]],front=[[2,6],[3,6],[1,6],[4,6],[0,6],[5,6],[2,5],[3,5],[1,5],[4,5],[0,5],[5,5]];const out=[];if(k)out.push([k,2,7]);
 const used=new Set(['2,7']);const pick=list=>{for(const s of list){const key=s[0]+','+s[1];if(!used.has(key)){used.add(key);return s}}return null};
 for(const p of others){const s=(p.t!=='p'?pick(back):null)||pick(front)||pick(back);if(s)out.push([p,s[0],s[1]])}return out}
+function randomLineup(){const shuf=a=>{for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a};const my=mine(),used=new Set(),cols={5:shuf([0,1,2,3,4,5]),6:shuf([0,1,2,3,4,5]),7:shuf([0,1,2,3,4,5])};
+const take=rows=>{for(const r of rows)for(const c of cols[r]){const k=c+','+r;if(!used.has(k)){used.add(k);return[c,r]}}return null};
+const put=(p,s)=>{if(!s)return;p.q=s[0];p.r=s[1];p.vq=s[0];p.vr=s[1];p.lift=0;p.sq=0};
+for(const p of shuf(my.filter(p=>p.t!=='p')))put(p,take([7,6,5]));for(const p of my.filter(p=>p.t==='p'))put(p,take([6,5,7]))}
+async function swapPieces(a,b){G.mode='busy';const aq=a.q,ar=a.r;a.q=b.q;a.r=b.r;b.q=aq;b.r=ar;G.sel=null;G.moves=[];G.swapLeft--;sfx(560,0.08,'triangle',0.05,1.5);updatePanel('자리 바꾸는 중…');
+await Promise.all([move(a,a.q,a.r,280,{hop:16,ease:'inout'}),move(b,b.q,b.r,280,{hop:16,ease:'inout'})]);for(const p of[a,b]){wobble(p,0.6);dust(p.q,p.r,5)}thud(0.06);planIntents();G.mode='player';updatePanel()}
 function snapLineup(){for(const s of lineupSpots()){const p=s[0];p.q=s[1];p.r=s[2];p.vq=s[1];p.vr=s[2];p.lift=0;p.sq=0}}
 function blinds(to,dur){const fr=G.blind;return anim(dur,e=>{G.blind=fr+(to-fr)*e},'inout')}
 
@@ -339,7 +350,7 @@ floatText('+'+gold,e.q,e.r,'#f0c040',15,40);if(att)gainXP(att.t,xpOf(e));if(e.ro
 if(G.combo>=2){const c=base(e.q,e.r);G.comboFx={n:G.combo,t0:performance.now(),x:c[0],y:c[1]-62}}
 sfx(320+G.combo*90,0.14,'square',0.06,0.45);thud(0.14);updatePanel();return true}
 
-async function doMove(p,m){G.mode='busy';G.moves=[];G.sel=null;G.allowed=null;updatePanel();const from={q:p.q,r:p.r};let hit=false,kill=false,prev=from,landed=false;const isJump=p.t==='n'||m.jump;
+async function doMove(p,m){G.mode='busy';G.moved=true;G.moves=[];G.sel=null;G.allowed=null;updatePanel();const from={q:p.q,r:p.r};let hit=false,kill=false,prev=from,landed=false;const isJump=p.t==='n'||m.jump;
 await setSq(p,0.5,90);sfx(isJump?300:200,0.07,'triangle',0.045,1.4);p.sq=-0.3;
 for(let i=0;i<m.path.length;i++){const st=m.path[i],last=i===m.path.length-1,pr=i?m.path[i-1]:from;const o0=occ(st.q,st.r),foe=o0&&o0.side==='e';
 const dist=Math.hypot(st.q-p.vq,st.r-p.vr);
@@ -366,13 +377,13 @@ if(p.t==='p'&&p.r===0&&has('pqueen')){p.t='q';p.flash=1;ring(p.q,p.r,'#f0c040',5
 if(G.lives<=0){await sleep(300);return endPlayerTurn()}
 if(!enemies().length){await sleep(420);return endPlayerTurn()}
 let rush=false;if(!kill&&landed&&p.t==='n'&&has('nrush')&&!G.rushUsed){G.rushUsed=true;rush=true;floatText('질주!',p.q,p.r,'#cfd8ff',13,66);sfx(700,0.1,'triangle',0.05,1.4)}
-if(kill){G.chainN=(G.chainN||0)+1;const ql=chainLimit(p.t);if(G.chainN>=ql){floatText('연속 '+ql+'번 끝!',p.q,p.r,'#cfcfd6',13,70);await sleep(280);return endPlayerTurn()}}
+if(kill){G.chainN=(G.chainN||0)+1;const ql=chainLimit(p.t);pipBreak(p,Math.max(0,ql-G.chainN),ql);if(G.chainN>=ql){floatText('연속 '+ql+'번 끝!',p.q,p.r,'#cfcfd6',13,70);await sleep(280);return endPlayerTurn()}}
 let extra=false;if(!kill&&hit){if(p.t==='n'&&has('nhold')&&!G.holdUsed){G.holdUsed=true;extra=true;floatText('물고 늘어지기!',p.q,p.r,'#cfd8ff',13,66)}else if(has('gchase')&&!G.chaseUsed){G.chaseUsed=true;extra=true;floatText('추격!',p.q,p.r,'#f0c040',14,66)}if(extra)sfx(760,0.12,'triangle',0.05,1.4)}
 if(kill||rush||extra){G.chainPiece=p;G.sel=p;G.selT=performance.now();G.moves=genMoves(p);if(!G.moves.length)return endPlayerTurn();G.mode='player';updatePanel();return}
 if(p.t==='k'&&has('kcommand')&&!G.cmdUsed&&!hit){const adj=mine().filter(o=>o!==p&&Math.max(Math.abs(o.q-p.q),Math.abs(o.r-p.r))===1&&genMoves(o).length);if(adj.length){G.cmdUsed=true;G.allowed=new Set(adj.map(o=>o.id));G.allowedT=performance.now();floatText('왕의 명령!',p.q,p.r,'#f0c040',14,66);sfx(660,0.15,'square',0.05,1.5);G.mode='player';updatePanel();return}}
 endPlayerTurn()}
 
-async function endPlayerTurn(){G.mode='busy';G.sel=null;G.moves=[];G.chainPiece=null;G.chainN=0;G.rushUsed=false;G.holdUsed=false;G.chaseUsed=false;G.cmdUsed=false;G.allowed=null;G.inspect=null;updatePanel();if(G.lives<=0)return gameOver();
+async function endPlayerTurn(){G.mode='busy';G.swapLeft=0;G.sel=null;G.moves=[];G.chainPiece=null;G.chainN=0;G.rushUsed=false;G.holdUsed=false;G.chaseUsed=false;G.cmdUsed=false;G.allowed=null;G.inspect=null;updatePanel();if(G.lives<=0)return gameOver();
 await processCards();
 if(!enemies().length)return roundClear();
 await enemyTurn();
@@ -437,7 +448,7 @@ async function enterNode(n){if(n.t==='shop'||n.t==='rest'||n.t==='event')gainSou
 if(n.t==='shop')await openShop();else if(n.t==='rest')await openRest();else await openEvent();
 G.mode='map';updatePanel()}
 async function startRound(kind){G.kind=kind;G.round++;G.shieldUsed=false;G.bloodUsed=false;for(const p of mine())p.shieldUsed=false;G.mode='busy';G.combo=0;G.sel=null;G.moves=[];G.inspect=null;updatePanel('준비 중…');
-G.view='board';snapLineup();parts.length=0;dead.length=0;await sleep(120);sfx(196,0.2,'triangle',0.04,2);await blinds(0,460);
+G.view='board';randomLineup();G.moved=false;G.swapLeft=2+(hasU('tactician')?1:0);parts.length=0;dead.length=0;await sleep(120);sfx(196,0.2,'triangle',0.04,2);await blinds(0,460);
 const sw=spawnWave(G.depth,kind);G.seen=G.seen||new Set();const nr=sw.roles.filter(x=>!G.seen.has(x));nr.forEach(x=>G.seen.add(x));const nrs=nr.length?'새 적: '+nr.map(x=>ROLE[x].name).join(', ')+' · 눌러서 확인':'';
 if(kind==='boss'){G.banner={text:'보스 · '+ROLE[sw.bossRole].name,sub:ROLE[sw.bossRole].desc.split('.')[0],t0:performance.now(),dur:1700};G.shake=Math.max(G.shake,8);thud(0.2)}
 else G.banner={text:(kind==='elite'?'엘리트 · ':'')+G.act+'-'+G.floor+' 전투',sub:nrs||(kind==='elite'?'강한 적이 몰려와요':''),t0:performance.now(),dur:1300};
@@ -531,7 +542,7 @@ document.getElementById('go').onclick=async()=>{sfx(440,0.1,'square',0.04);await
 /* 돌판 패널 상태 */
 function updatePanel(msg){if(!G)return;let main,sub='';
 if(msg){main=[[msg,'#ece8de']];G.busyMsg=msg}
-else if(G.mode==='player'){if(G.inspect&&!G.sel&&pieces.includes(G.inspect)){const e=G.inspect,rl=e.role&&ROLE[e.role];main=[['적 정보','#ff8a7a']];sub='다른 곳을 누르면 닫혀요'}else if(G.allowed&&!G.sel){main=[['왕의 명령! ','#f0c040'],['옆의 말 하나 더','#ece8de']];sub='금색으로 표시된 말을 골라요'}else if(G.chainPiece){main=[['×'+G.combo+' 콤보! ','#f0c040'],[NAME[G.chainPiece.t]+' 한 번 더','#ece8de']];{const left=chainLimit(G.chainPiece.t)-(G.chainN||0);sub=left>0?'연속 이동 '+left+'번 남았어요':'이번이 마지막 이동이에요'}}else if(G.sel){main=[[NAME[G.sel.t]+' 선택','#ece8de']];sub='점이나 금색 칸으로 움직여요'}else{main=[['내 차례','#ece8de']];sub='흰 말을 눌러 움직여요'}}
+else if(G.mode==='player'){if(G.inspect&&!G.sel&&pieces.includes(G.inspect)){const e=G.inspect,rl=e.role&&ROLE[e.role];main=[['적 정보','#ff8a7a']];sub='다른 곳을 누르면 닫혀요'}else if(G.allowed&&!G.sel){main=[['왕의 명령! ','#f0c040'],['옆의 말 하나 더','#ece8de']];sub='금색으로 표시된 말을 골라요'}else if(G.chainPiece){main=[['×'+G.combo+' 콤보! ','#f0c040'],[NAME[G.chainPiece.t]+' 한 번 더','#ece8de']];{const left=chainLimit(G.chainPiece.t)-(G.chainN||0);sub=left>0?'연속 이동 '+left+'번 남았어요':'이번이 마지막 이동이에요'}}else if(G.sel){main=[[NAME[G.sel.t]+' 선택','#ece8de']];sub=G.swapLeft>0&&!G.moved?'파란 괄호의 내 말을 누르면 자리 바꾸기':'점이나 금색 칸으로 움직여요'}else{main=[['내 차례','#ece8de']];sub=G.swapLeft>0&&!G.moved?'말 둘을 차례로 누르면 자리 바꾸기 · '+G.swapLeft+'번':'흰 말을 눌러 움직여요'}}
 else if(G.mode==='map'){main=[['어디로 갈까요?','#ece8de']];sub=G.mapSel!=null?'칸 설명을 확인하고 출발해요':'빛나는 칸을 눌러 살펴봐요'}else if(G.mode==='over'){main=[['게임 끝','#e0483d']]}else if(G.mode==='title'){main=[['MONO GAMBIT','#ece8de']]}else main=[[G.busyMsg||'…','#ece8de']];
 const key=JSON.stringify([main,sub]);if(key!==G.stKey){G.stKey=key;G.st={main,sub,t0:performance.now()}}}
 const BTN={x:252,y:PY+9,w:94,h:28};
@@ -550,7 +561,7 @@ if(ph){const isMove=G.moves.some(m=>m.q===ph.q&&m.r===ph.r);if(ph.side==='p'||is
 if(!tl)return;const m=G.moves.find(m=>m.q===tl.q&&m.r===tl.r);
 if(G.sel&&m){doMove(G.sel,m);return}
 if(G.chainPiece)return;
-const o=occ(tl.q,tl.r);if(o&&o.side==='e'&&!G.sel){G.inspect=o;o.flash=0.6;sfx(400,0.04,'square',0.03);updatePanel();return}G.inspect=null;if(o&&o.side==='p'&&G.allowed&&!G.allowed.has(o.id))return;if(o&&o.side==='p'){if(G.sel===o){G.sel=null;G.moves=[]}else{G.sel=o;G.selT=performance.now();G.moves=genMoves(o);wobble(o,0.35,320);sfx(520,0.05,'square',0.03)}}else{G.sel=null;G.moves=[]}updatePanel()});
+const o=occ(tl.q,tl.r);if(o&&o.side==='e'&&!G.sel){G.inspect=o;o.flash=0.6;sfx(400,0.04,'square',0.03);updatePanel();return}G.inspect=null;if(o&&o.side==='p'&&G.allowed&&!G.allowed.has(o.id))return;if(o&&o.side==='p'&&G.sel&&G.sel!==o&&G.swapLeft>0&&!G.moved&&!G.chainPiece&&!G.allowed){swapPieces(G.sel,o);return}if(o&&o.side==='p'){if(G.sel===o){G.sel=null;G.moves=[]}else{G.sel=o;G.selT=performance.now();G.moves=genMoves(o);wobble(o,0.35,320);sfx(520,0.05,'square',0.03)}}else{G.sel=null;G.moves=[]}updatePanel()});
 cv.addEventListener('pointerup',ev=>{if(!G||!G.btnDown)return;G.btnDown=false;const[px,py]=toLogical(ev);if(inRect(px,py,BTN)&&btnEnabled()){sfx(420,0.06,'square',0.04,1.3);if(G.view==='map')goNode(G.mapSel);else endPlayerTurn()}});
 cv.addEventListener('pointerleave',()=>{if(G)G.btnDown=false});cv.addEventListener('pointercancel',()=>{if(G)G.btnDown=false});
 
@@ -578,7 +589,7 @@ dtext(g,'잡으면 골드 '+valOf(e),x0,y0+76,12,'#f0c040');g.restore()}
 function drawPieceCard(g,now,sp){const t=sp.t,y0=PY+52;
 if(G.pillType!==t){G.pillType=t;G.pillSel=-1;G.cardT=now}const ck=Math.min(1,(now-(G.cardT||0))/260),ce=EASE.back(ck);
 well(g,14,y0,62,86);const bob=Math.sin(now/260)*1.5;pxEll(g,45,y0+78,20,4,2,'rgba(0,0,0,0.6)');
-g.save();g.translate(45,y0+78);g.scale(ce,ce);spr(g,t,-21,-51-2-bob,3,PAL.ws);g.restore();
+g.save();g.translate(45,y0+78);g.scale(ce,ce);spr(g,t,-21,-SP[t].length*3-2-bob,3,PAL.ws);g.restore();
 const x0=84;g.save();g.globalAlpha=ck;g.translate(Math.round((1-ce)*-10),0);
 let w=dtext(g,NAME[t],x0,y0-1,17,'#ffffff');dtext(g,'LV '+G.lvl[t],x0+w+4,y0+2,14,'#f0c040');dtext(g,G.xp[t]+' / '+need(G.lvl[t])+' XP',346,y0+3,11,'#8c8c99',{anchor:'right'});
 xpBar(g,x0,y0+22,262,7,t);
@@ -594,7 +605,7 @@ g.restore()}
 function drawArmy(g,now){const types=['k','p','n','b','r','q'].filter(t=>mine().some(p=>p.t===t)||G.lvl[t]>1).slice(0,6);
 types.forEach((t,i)=>{const cx=14+(i%3)*112,cy=PY+52+Math.floor(i/3)*46,w=106,h=40;const fl=G.lvFlash[t]?Math.max(0,1-(now-G.lvFlash[t])/900):0;
 g.fillStyle='#000';g.fillRect(cx-1,cy-1,w+2,h+2);g.fillStyle=fl>0?`rgb(${30+fl*60|0},${30+fl*45|0},${36-fl*10|0})`:'#1e1e24';g.fillRect(cx,cy,w,h);g.fillStyle='#2c2c34';g.fillRect(cx,cy,w,2);
-const cnt=mine().filter(p=>p.t===t).length;spr(g,t,cx+5,cy+6,1.6,cnt?PAL.w:PAL.k);
+const cnt=mine().filter(p=>p.t===t).length;spr(g,t,cx+5,cy+Math.round((40-SP[t].length*1.6)/2),1.6,cnt?PAL.w:PAL.k);
 dtext(g,NAME[t],cx+30,cy+3,13,'#ece8de');dtext(g,'LV'+G.lvl[t],cx+w-4,cy+4,11,'#f0c040',{anchor:'right'});xpBar(g,cx+30,cy+21,70,5,t);
 const own=CARDS.filter(c=>c.t===t&&G.cards.has(c.id));own.forEach((c,j)=>gem(g,cx+30+j*8,cy+31,c.rar,5));if(!own.length)dtext(g,'축복 없음',cx+30,cy+27,11,'#6e6e7a');
 if(cnt>1)dtext(g,'x'+cnt,cx+26,cy+28,11,'#b8b8c4',{anchor:'right'})});
@@ -603,12 +614,16 @@ if(!types.length||types.length>3)return;dtext(g,'말을 누르면 받은 축복�
 function pxEll(g,cx,cy,rx,ry,s,col){if(rx<=0||ry<=0)return;g.fillStyle=col;for(let y=-ry;y<ry;y+=s){const yy=(y+s/2)/ry,hw=Math.floor(rx*Math.sqrt(Math.max(0,1-yy*yy))/s)*s;if(hw>0)g.fillRect(Math.round(cx-hw),Math.round(cy+y),hw*2,s)}}
 function pxRing(g,cx,cy,rx,ry,th,s,col){if(rx<=0||ry<=0)return;g.fillStyle=col;const ix=rx-th,iy=ry-th;for(let y=-ry;y<ry;y+=s){const yy=(y+s/2)/ry,ho=Math.floor(rx*Math.sqrt(Math.max(0,1-yy*yy))/s)*s;if(ho<=0)continue;let hi=0;if(iy>0&&Math.abs(y+s/2)<iy){const y2=(y+s/2)/iy;hi=Math.floor(ix*Math.sqrt(Math.max(0,1-y2*y2))/s)*s}if(hi<=0){g.fillRect(Math.round(cx-ho),Math.round(cy+y),ho*2,s)}else{g.fillRect(Math.round(cx-ho),Math.round(cy+y),ho-hi,s);g.fillRect(Math.round(cx+hi),Math.round(cy+y),ho-hi,s)}}}
 function sprAt(g,t,cx,by,pal,sq,lift,alpha,m){m=m||1;const h=SP[t].length*S,w=SP[t][0].length;g.save();g.globalAlpha=alpha;g.translate(cx,by-lift);g.scale((1+sq*0.22)*m,(1-sq*0.22)*m);spr(g,t,-w/2*S,-h,S,pal);g.restore()}
+function diamond(g,x,y,col,hi){const W=[1,3,5,3,1],s=2,cx=x+5;g.fillStyle='#000';for(let j=-1;j<=5;j++){const w=j<0||j>4?1:W[j]+2;g.fillRect(cx-w*s/2,y+j*s,w*s,s)}for(let j=0;j<5;j++){g.fillStyle=col;g.fillRect(cx-W[j]*s/2,y+j*s,W[j]*s,s)}if(hi){g.fillStyle=hi;g.fillRect(cx-2,y+2,2,2)}}
+function pipPos(p,i,lim){const c=base(p.q,p.r),h=SP[sk(p)].length*S;return[Math.round(c[0]-(lim*14-4)/2+i*14),Math.round(c[1]-h-18)]}
+function pipBreak(p,i,lim){const[x,y]=pipPos(p,i,lim);for(let k=0;k<8;k++){const a=Math.random()*Math.PI*2,v=1+Math.random()*2;parts.push({x:x+5,y:y+5,vx:Math.cos(a)*v,vy:Math.sin(a)*v-1.5,col:k%2?'#f0c040':'#fff3c0',sz:2,life:0,max:380,g:0.8})}}
 function drawPiece(g,p,now){const c=base(p.vq,p.vr);const cx=c[0]+p.kx,by=c[1]+p.ky;
 for(const tr of p.trail){const age=(now-tr.t)/170;if(age>=1)continue;sprAt(g,sk(p),tr.x,tr.y,PAL.gh,0,tr.l,(1-age)*0.32)}
 const lift=p.lift+p.hov*(6+2*Math.sin(now/170));
 g.globalAlpha=p.alpha*(1-Math.min(0.5,lift/60));const sw=SP[sk(p)][0].length/2*S*(1-Math.min(0.4,lift/70))*(1+p.sq*0.2);pxEll(g,c[0]+p.kx,c[1],sw,2.2*S,2,'rgba(0,0,0,0.5)');g.globalAlpha=1;
 let pal;if(p.flash>0.45)pal=PAL.fl;else if(p.side==='p')pal=(G&&G.sel===p)?PAL.ws:PAL.w;else{const it=p.intent,o=it&&occ(it.q,it.r);pal=(o&&o.side==='p')?PAL.kr:p.boss?PAL.kb:PAL.k}
 sprAt(g,sk(p),cx,by,pal,p.sq,lift,p.alpha,1);
+if(G&&G.mode==='player'&&p.side==='p'&&(p===G.sel||p===G.chainPiece)&&!(G.allowed&&!G.chainPiece)){const lim=chainLimit(p.t),ch=G.chainPiece===p,left=lim-(ch?(G.chainN||0):0);for(let i=0;i<lim;i++){const[x,y0]=pipPos(p,i,lim),y=y0-Math.round(lift),f=i<left,last=ch&&left===1&&f,bl=Math.floor(now/180)%2;diamond(g,x,y,f?(last?(bl?'#ff8a7a':'#e0483d'):ch?'#f0c040':'#8a7a4a'):'#2c2c34',f?(last?'#ffd0c8':ch?'#fff3c0':null):null)}}
 if(p.boss){const h=SP[sk(p)].length*S,y=by-h-lift-12;g.fillStyle='#000';g.fillRect(cx-8,y-1,17,8);g.fillStyle='#f0c040';g.fillRect(cx-7,y+2,15,4);g.fillRect(cx-7,y,3,2);g.fillRect(cx-1,y-1,3,3);g.fillRect(cx+5,y,3,2);g.fillStyle='#fff3c0';g.fillRect(cx-6,y+2,4,1)}
 if(p.side==='e'&&p.stun>0){const h=SP[p.t].length*S;for(let i=0;i<3;i++){const a=now/300+i*2.1,sx2=cx+Math.cos(a)*12,sy2=by-h-lift-6+Math.sin(a)*3;g.fillStyle='#000';g.fillRect(sx2-2,sy2-2,5,5);g.fillStyle='#fff3c0';g.fillRect(sx2-1,sy2-1,3,3)}}
 if(p.side==='p'&&p.t==='p'&&G&&has('pshield')&&!p.shieldUsed){g.fillStyle='#000';g.fillRect(cx+7,by-20-lift,8,9);g.fillStyle='#c9a85a';g.fillRect(cx+8,by-19-lift,6,6);g.fillRect(cx+9,by-13-lift,4,1);g.fillStyle='#f0dc9a';g.fillRect(cx+8,by-19-lift,3,2)}
@@ -633,7 +648,7 @@ for(const sl of HSL)hSlot(sl[0],HY,sl[1],HH);const mid=HY+HH/2;
 G.goldShown+=(G.gold-G.goldShown)*Math.min(1,rdt/110);if(Math.abs(G.gold-G.goldShown)<0.5)G.goldShown=G.gold;G.goldBump=Math.max(0,G.goldBump-rdt/260);
 {const [x,w]=HSL[1],gs=String(Math.round(G.goldShown)),nw=tw(gs,16,FP),tot=16+6+nw,x0=Math.round(x+w/2-tot/2),gb=1+G.goldBump*0.35;g.save();g.translate(x0+8,mid);g.scale(gb,gb);hCoin(g,-8,-8);g.restore();dtext(g,gs,x0+22,mid+1,16,G.goldBump>0.1?'#fff3c0':'#f0c040',{mid:true,font:FP})}
 {const [x,w]=HSL[2],hn=Math.min(5,Math.max(3,G.lives)),tot=hn*18-4;G.heartX0=Math.round(x+w/2-tot/2);for(let i=0;i<hn;i++)hHeart(g,G.heartX0+i*18,Math.round(mid-7+Math.sin(now/300+i)*0.6),i<G.lives)}
-{const [x,w]=HSL[3],es=String(enemies().length),nw=tw(es,16,FP),tot=15+6+nw,x0=Math.round(x+w/2-tot/2);spr(g,'p',x0,Math.round(mid-9),1.05,PAL.k);dtext(g,es,x0+21,mid+1,16,'#ece8de',{mid:true,font:FP})}}
+{const [x,w]=HSL[3],es=String(enemies().length),nw=tw(es,16,FP),tot=15+6+nw,x0=Math.round(x+w/2-tot/2);spr(g,'p',x0,Math.round(mid-SP.p.length*1.05/2),1.05,PAL.k);dtext(g,es,x0+21,mid+1,16,'#ece8de',{mid:true,font:FP})}}
 
 /* 지도 그리기 */
 const mapBg=document.createElement('canvas');let mapBgKey='';
@@ -677,7 +692,7 @@ g.globalAlpha=1;
 if(n.done){g.fillStyle='#000';g.fillRect(9,-21,14,12);g.fillStyle='#f0c040';g.fillRect(11,-15,3,3);g.fillRect(13,-13,3,3);g.fillRect(15,-17,3,3);g.fillRect(17,-19,3,3)}
 g.restore()}
 
-const mk=G.mk||{x:180,y:434},kb=G.mode==='map'?Math.abs(Math.sin(now/300))*3:0;pxEll(g,mk.x-24,mk.y+14,12,4,2,'rgba(0,0,0,0.5)');spr(g,'k',mk.x-24-7*1.6,mk.y+14-18*1.6-kb,1.6,PAL.w)}
+const mk=G.mk||{x:180,y:434},kb=G.mode==='map'?Math.abs(Math.sin(now/300))*3:0;pxEll(g,mk.x-24,mk.y+14,12,4,2,'rgba(0,0,0,0.5)');spr(g,'k',mk.x-24-7*1.6,mk.y+14-SP.k.length*1.6-kb,1.6,PAL.w)}
 function drawMapInfo(g,now){const y0=PY+52;
 if(G.mapSel!=null){const n=G.map.nodes[G.mapSel],av=availNodes().includes(n.id),isB=n.t==='boss',br=ROLE[BOSS[(G.act-1)%3].role];const ck=Math.min(1,(now-(G.mapSelT||0))/240);
 well(g,14,y0,62,86);g.save();g.globalAlpha=ck;if(isB){const bk=bossKey(),bw=SP[bk][0].length*2.4,bh=SP[bk].length*2.4;spr(g,bk,45-bw/2,y0+80-bh,2.4,PAL.kb)}else pixIc(g,n.t,21,y0+19,3);
@@ -704,6 +719,7 @@ const a=[OX+(e.vq+0.5)*TW,TOP+(e.vr+0.5)*TH],b=[OX+(it.q+0.5)*TW,TOP+(it.r+0.5)*
 poly(g,quad(it.q,it.r,0.06,0.94),`rgba(224,72,61,${dang?0.16+0.18*pulse:0.07+0.05*pulse})`);brackets(g,it.q,it.r,dang?'#e0483d':'rgba(224,72,61,0.6)',dang?2.5:1.8,(1-EASE.out(ik))*0.12+(dang?pulse*0.02:0));g.globalAlpha=1}
 {const W=wallSet();for(const k of W){const [q,r]=k.split(',').map(Number);const a=pt(q+0.08,r+0.08);g.strokeStyle='rgba(201,168,90,0.45)';g.lineWidth=1.5;g.setLineDash([4,3]);g.strokeRect(a[0],a[1],TW*0.84,TH*0.84);g.setLineDash([])}}
 if(G.allowed&&G.mode==='player'&&!G.sel){for(const p of mine())if(G.allowed.has(p.id))brackets(g,p.q,p.r,'#f0c040',2.5,pulse*0.03)}
+if(G.sel&&G.mode==='player'&&G.swapLeft>0&&!G.moved&&!G.chainPiece&&!G.allowed){for(const p of mine())if(p!==G.sel)brackets(g,p.q,p.r,'rgba(143,182,255,0.8)',1.8,pulse*0.02)}
 if(G.sel){const dz=dangerSet(),sk=now-G.selT;const qd=quad(G.sel.q,G.sel.r,0.04,0.96);g.strokeStyle='#f0c040';g.lineWidth=2;g.strokeRect(qd[0][0],qd[0][1],qd[1][0]-qd[0][0],qd[3][1]-qd[0][1]);
 for(const m of G.moves){const d=Math.hypot(m.q-G.sel.q,m.r-G.sel.r),k=Math.max(0,Math.min(1,(sk-d*28)/180)),e=EASE.back(k);if(k<=0)continue;const o=occ(m.q,m.r);
 if(o&&o.side==='e'){g.globalAlpha=k;poly(g,quad(m.q,m.r,0.08,0.92),`rgba(240,192,64,${0.14+0.14*pulse})`);brackets(g,m.q,m.r,'#f0c040',2.5,(1-e)*0.15-pulse*0.02);g.globalAlpha=1}
