@@ -502,7 +502,7 @@ let rush=false;if(!kill&&landed&&p.t==='n'&&has('nrush')&&!G.rushUsed){G.rushUse
 if(kill){G.chainN=(G.chainN||0)+1;const ql=chainLimit(p.t);pipBreak(p,Math.max(0,ql-G.chainN),ql);if(G.chainN>=ql){floatText('연속 '+ql+'번 끝!',p.q,p.r,'#cfcfd6',13,70);await sleep(280);return endPlayerTurn()}}
 let extra=false;if(!kill&&hit){if(p.t==='n'&&has('nhold')&&!G.holdUsed){G.holdUsed=true;extra=true;floatText('물고 늘어지기!',p.q,p.r,'#cfd8ff',13,66)}else if(has('gchase')&&!G.chaseUsed){G.chaseUsed=true;extra=true;floatText('추격!',p.q,p.r,'#f0c040',14,66)}if(extra)sfx(760,0.12,'triangle',0.05,1.4)}
 if(kill||rush||extra){G.chainPiece=p;G.sel=p;G.selT=performance.now();G.moves=genMoves(p);if(!G.moves.length)return endPlayerTurn();G.mode='player';updatePanel();return}
-if(p.t==='k'&&has('kcommand')&&!G.cmdUsed&&!hit){const adj=mine().filter(o=>o!==p&&Math.max(Math.abs(o.q-p.q),Math.abs(o.r-p.r))===1&&genMoves(o).length);if(adj.length){G.cmdUsed=true;G.allowed=new Set(adj.map(o=>o.id));G.allowedT=performance.now();floatText('왕의 명령!',p.q,p.r,'#f0c040',14,66);sfx(660,0.15,'square',0.05,1.5);G.mode='player';updatePanel();return}}
+if(p.t==='k'&&has('kcommand')&&!G.cmdUsed&&!hit){const adj=mine().filter(o=>o!==p&&Math.max(Math.abs(o.q-p.q),Math.abs(o.r-p.r))===1&&genMoves(o).length);if(adj.length){G.cmdUsed=true;G.chainPiece=null;G.chainN=0;G.allowed=new Set(adj.map(o=>o.id));G.allowedT=performance.now();floatText('왕의 명령!',p.q,p.r,'#f0c040',14,66);sfx(660,0.15,'square',0.05,1.5);G.mode='player';updatePanel();return}}
 endPlayerTurn()}
 
 async function endPlayerTurn(){G.mode='busy';for(const p of mine())p.frozen=0;G.swapLeft=0;G.sel=null;G.moves=[];G.chainPiece=null;G.chainN=0;G.rushUsed=false;G.holdUsed=false;G.chaseUsed=false;G.cmdUsed=false;G.allowed=null;G.inspect=null;updatePanel();if(G.lives<=0)return gameOver();
@@ -554,8 +554,9 @@ function genMap(){const counts=[1,2+(Math.random()<0.4?1:0),3,2+(Math.random()<0
 counts.forEach((n,f)=>{const sp=n===1?0:n===2?150:108;for(let j=0;j<n;j++){const mid=f>0&&f<5;nodes.push({id:nodes.length,f,j,n,x:Math.round(180+(j-(n-1)/2)*sp+(mid?(Math.random()-0.5)*14:0)),y:MAPY[f]+(mid?Math.round((Math.random()-0.5)*10):0),t:f===0?'start':f===5?'boss':null,done:f===0})}});
 const W=G.asc>=1?[['fight',28],['elite',27],['shop',15],['rest',15],['event',15]]:[['fight',40],['elite',15],['shop',15],['rest',15],['event',15]],roll=()=>{let x=Math.random()*100;for(const w of W){x-=w[1];if(x<=0)return w[0]}return 'fight'};
 for(let f=1;f<=4;f++){const fl=nodes.filter(n=>n.f===f);if(f===1){fl.forEach(n=>{n.t=(G.act>1&&Math.random()<0.2)?'event':'fight'});if(!fl.some(n=>n.t==='fight'))fl[0].t='fight';continue}
-fl.forEach(n=>{let t=roll();if(fl.some(o=>o.t===t)&&Math.random()<0.6)t=roll();n.t=t});
-if(f===4&&!fl.some(n=>n.t==='shop'||n.t==='rest'))fl[Math.floor(Math.random()*fl.length)].t=Math.random()<0.5?'shop':'rest'}
+const CAP={shop:2,rest:2,event:2},cnt=t=>nodes.filter(n=>n.t===t).length,roll2=()=>{for(let k=0;k<12;k++){const t=roll();if(!CAP[t]||cnt(t)<CAP[t])return t}return Math.random()<0.7?'fight':'elite'};
+fl.forEach(n=>{n.t=null;let t=roll2();if(fl.some(o=>o.t===t)&&Math.random()<0.6){n.t=null;t=roll2()}n.t=t});
+if(f===4&&!fl.some(n=>n.t==='shop'||n.t==='rest')){const pick=fl[Math.floor(Math.random()*fl.length)];let ok=['shop','rest'].filter(t=>cnt(t)<2);if(!ok.length){const t=Math.random()<0.5?'shop':'rest',old=nodes.find(n=>n.t===t&&n.f<4);if(old)old.t='fight';ok=[t]}pick.t=ok[Math.floor(Math.random()*ok.length)]}}
 const edges=[],frac=n=>n.n===1?0.5:n.j/(n.n-1);
 for(let f=0;f<5;f++){const A=nodes.filter(n=>n.f===f),B=nodes.filter(n=>n.f===f+1);for(const a of A){let t=B.filter(b=>Math.abs(frac(b)-frac(a))<=0.5);if(!t.length)t=[B.reduce((m,b)=>Math.abs(frac(b)-frac(a))<Math.abs(frac(m)-frac(a))?b:m)];for(const b of t)edges.push([a.id,b.id])}
 for(const b of B)if(!edges.some(e=>e[1]===b.id)){const a=A.reduce((m,x)=>Math.abs(frac(x)-frac(b))<Math.abs(frac(m)-frac(b))?x:m);edges.push([a.id,b.id])}}
