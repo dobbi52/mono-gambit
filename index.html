@@ -83,7 +83,7 @@ button.ghost{background:#1e1e24;box-shadow:inset 0 2px 0 #2c2c34,inset 0 -4px 0 
 #ov.tov{background:linear-gradient(rgba(6,6,9,0) 0%,rgba(6,6,9,0) 62%,rgba(6,6,9,.75) 74%);align-items:flex-end}
 .tmenu{display:flex;flex-direction:column;align-items:center;gap:7px;width:100%;max-width:340px;transform:translateY(16px);opacity:0;transition:transform .5s cubic-bezier(.2,.9,.3,1.2) .35s,opacity .4s .35s}
 #ov.in .tmenu{transform:none;opacity:1}#ov.out .tmenu{opacity:0}
-button.big{width:100%;padding:9px 0 12px;animation:tgo 2.2s ease-in-out infinite}
+button.big{width:100%;padding:9px 0 12px;display:flex;flex-direction:column;align-items:center;gap:2px;animation:tgo 2.2s ease-in-out infinite}
 @keyframes tgo{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
 .trow{display:flex;gap:6px;width:100%}.trow button{flex:1;padding:8px 4px 11px}.trow button.snd{flex:0 0 auto;padding:8px 9px 11px}.trow #altar{flex:1.6}.trow .tx{white-space:nowrap}
 .acc{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:0 2px}.acc button{padding:4px 10px 7px}.acc[hidden]{display:none}.accInfo{display:flex;flex-direction:column;align-items:flex-start;min-width:0;text-align:left}.accInfo span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
@@ -484,7 +484,7 @@ return out}
 function bestMove(e,res,k){let best=null,bs=-1e9;for(const m of enemyMoves(e)){const key=m.q+','+m.r;if(res.has(key))continue;const o=occ(m.q,m.r);if(o&&o.side==='e'&&o!==e)continue;let sc;
 if(o&&o.side==='p')sc=o.t==='k'?1000:o.t==='q'?400:100+VAL[o.t];else if(e.t==='p')sc=1;else{const d=k?Math.max(Math.abs(m.q-k.q),Math.abs(m.r-k.r)):0;sc=-d+m.r*0.3+Math.random()*0.6}
 if(sc>bs){bs=sc;best=m}}return best}
-function planIntents(){const res=new Set();const k=king();const list=enemies().sort((a,b)=>b.r-a.r);
+function planIntents(){if(G)G.turnN=(G.turnN||0)+1;const res=new Set();const k=king();const list=enemies().sort((a,b)=>b.r-a.r);
 for(const e of list){e.intent=null;e.intent2=null;e.cands=null;if(e.role==='b5'){e.freezeT=null;if(!e.stun&&(e.fcd||2)===1){const cs=mine().filter(p=>!p.frozen).sort((a,b)=>VAL[b.t]-VAL[a.t]+(Math.random()-0.5));e.freezeT=cs.slice(0,e.phase2?2:1).map(p=>p.id)}}
 if(e.stun>0)continue;if(e.role==='shadow'){const cs=enemyMoves(e).filter(m=>!res.has(m.q+','+m.r));if(cs.length){e.cands=cs;e.intent=cs[Math.floor(Math.random()*cs.length)];res.add(e.intent.q+','+e.intent.r)}continue}
 const best=bestMove(e,res,k);if(best){e.intent=best;res.add(best.q+','+best.r)}}
@@ -689,16 +689,32 @@ return `<div class="bgrp"><div class="bhead"><img class="ic" src="${icon(t)}" al
 /* 구글 로그인: 게임 모음(dobbi52.github.io)과 같은 Firebase 프로젝트. 저장 위치 games/mono-gambit/{uid}. 진행은 더 앞선 쪽으로 합치고, 판을 하는 도중에는 바꾸지 않아요. */
 const CLOUD={host:location.hostname==='dobbi52.github.io',ok:false,user:null,ref:null,msg:'',state:'',pending:null,timer:0};
 const inRun=()=>!!G&&G.view!=='title'&&G.mode!=='title'&&G.mode!=='over';
-function localSave(){return {meta:META,best:bestRound()}}
+/* 한 판 이어 하기: 지도 화면과 전투의 내 차례 시작마다 저장(그 기기 + 로그인 기록) */
+const RUN_SKIP=new Set(['sel','moves','chainPiece','inspect','bossEnt','banner','comboFx','cine','impact','kick','zoom','zoomAt','st','stKey','busyMsg','pillRects','btnDown','tut','freezeUntil','slowUntil','intentT','lvFlash','goldBump','hurt','shake','blind','bossFlash','flashW','allowedT','selT','cardT','pillT','mk','mapT0','mapSelT','titleT0','titleBoss','menuDown','lifeBump','newAsc']);
+const runRep=(k,v)=>RUN_SKIP.has(k)?undefined:v instanceof Set?{__set:[...v]}:v,runRev=(k,v)=>v&&typeof v==='object'&&Array.isArray(v.__set)?new Set(v.__set):v;
+function readRun(){try{const t=localStorage.getItem('mg_run');return t?JSON.parse(t):null}catch(e){return null}}
+function writeRun(r){try{if(r)localStorage.setItem('mg_run',JSON.stringify(r));else localStorage.removeItem('mg_run')}catch(e){}}
+const hasRun=()=>{const r=readRun();return !!(r&&r.g)};
+let runKey='';
+function saveRun(where){if(!G||G.tut)return;const P=pieces.map(p=>({id:p.id,side:p.side,t:p.t,q:p.q,r:p.r,hp:p.hp,maxhp:p.maxhp,role:p.role,boss:p.boss,intent:p.intent,intent2:p.intent2,cands:p.cands,cd:p.cd,cdMax:p.cdMax,fcd:p.fcd,freezeT:p.freezeT,phase2:p.phase2,enraged:p.enraged,stun:p.stun,frozen:p.frozen,shieldUsed:p.shieldUsed}));
+writeRun({at:Date.now(),where,uid,g:JSON.stringify(G,runRep),p:P});cloudPush()}
+function clearRun(){runKey='';writeRun({at:Date.now(),none:1});cloudPush()}
+function runTick(){if(!G||G.tut||G.view==='title')return;let k='';if(G.view==='map'&&G.mode==='map')k='m'+G.act+'.'+G.mapPos;else if(G.view==='board'&&G.mode==='player'&&!G.chainPiece&&!G.allowed&&ov.hidden)k='b'+G.round+'.'+(G.turnN||0);if(k&&k!==runKey){runKey=k;saveRun(k[0]==='m'?'map':'board')}}
+function runLabel(r){try{const g=JSON.parse(r.g);return (g.act>3?'무한의 탑 ':g.act+'막 ')+Math.max(1,g.floor||1)+'층'+(g.asc?' · 도전 '+g.asc:'')}catch(e){return ''}}
+async function resumeRun(){const r=readRun();if(!r||!r.g)return startRun();ov.classList.remove('tov');newGame();const g=JSON.parse(r.g,runRev);Object.keys(g).forEach(k=>G[k]=g[k]);G.cards=G.cards||new Set();G.star=G.star||new Set();
+pieces=r.p.map(o=>Object.assign({vq:o.q,vr:o.r,lift:0,flash:0,alpha:1,sq:0,kx:0,ky:0,hov:0,trail:[],trailOn:false},o));uid=Math.max(r.uid||0,...pieces.map(p=>p.id));runKey=r.where==='map'?'m'+G.act+'.'+G.mapPos:'b'+G.round+'.'+(G.turnN||0);
+G.sel=null;G.moves=[];G.chainPiece=null;G.inspect=null;G.allowed=null;G.banner=null;G.blind=1;
+if(r.where==='map'){G.view='board';await openMapView()}else{G.view='board';G.mode='busy';setBgm(G.kind==='boss'?'boss':'battle');updatePanel();await blinds(0,460);G.intentT=performance.now();G.mode='player';G.banner={text:'이어 하기',sub:runLabel(r),t0:performance.now(),dur:1100};updatePanel()}}
+function localSave(){return {meta:META,best:bestRound(),run:readRun()}}
 function cloudPush(){if(!CLOUD.ref||CLOUD.pending)return;clearTimeout(CLOUD.timer);CLOUD.timer=setTimeout(pushNow,800)}
 function pushNow(){if(!CLOUD.ref||CLOUD.pending)return;CLOUD.ref.set({savedAt:Date.now(),json:JSON.stringify(localSave())}).then(()=>{CLOUD.state='저장됨';renderAccount()}).catch(()=>{CLOUD.state='저장하지 못했어요';renderAccount()})}
 function mergeSave(rm){const a=META,b=Object.assign({souls:0,unl:[],total:0,seen:[],ascMax:0,ascClear:0},rm.meta||{}),hi=(b.total||0)>(a.total||0)?b:a;
 const m=Object.assign({},b,a,{souls:hi.souls||0,total:Math.max(a.total||0,b.total||0),unl:[...new Set([...(a.unl||[]),...(b.unl||[])])],seen:[...new Set([...(a.seen||[]),...(b.seen||[])])],ascMax:Math.max(a.ascMax||0,b.ascMax||0),ascClear:Math.max(a.ascClear||0,b.ascClear||0),army:a.army,ascSel:a.ascSel||0,tutDone:a.tutDone||b.tutDone});
-if(!m.unl.includes(m.army)&&m.army!=='basic')m.army=hi.army||'basic';Object.assign(META,m);try{localStorage.setItem('mg_meta',JSON.stringify(META));localStorage.setItem('mg_best2',Math.max(bestRound(),rm.best||0))}catch(e){}}
+if(!m.unl.includes(m.army)&&m.army!=='basic')m.army=hi.army||'basic';Object.assign(META,m);{const lr=readRun(),rr=rm.run;if(rr&&(!lr||(rr.at||0)>(lr.at||0)))writeRun(rr)}try{localStorage.setItem('mg_meta',JSON.stringify(META));localStorage.setItem('mg_best2',Math.max(bestRound(),rm.best||0))}catch(e){}}
 function sameSave(rm){const a=JSON.stringify(localSave()),b=JSON.stringify({meta:Object.assign({},META,rm.meta||{}),best:rm.best||0});return a===b}
 function syncNow(){if(!CLOUD.ref)return;CLOUD.ref.once('value').then(sn=>{const v=sn.val();let rm=null;if(v&&v.json){try{rm=JSON.parse(v.json)}catch(e){}}
 if(rm&&inRun()){CLOUD.pending=rm;CLOUD.state='판이 끝나면 기록을 합쳐요';renderAccount();return}applyRemote(rm)}).catch(()=>{CLOUD.state='서버 기록을 확인하지 못했어요';renderAccount()})}
-function applyRemote(rm){CLOUD.pending=null;if(rm){const same=sameSave(rm);mergeSave(rm);if(G&&G.view==='title'&&!inRun()&&ov.classList.contains('tov'))refreshTitle();if(same){CLOUD.state='저장됨';renderAccount();return}}pushNow()}
+function applyRemote(rm){CLOUD.pending=null;if(rm){const same=sameSave(rm);mergeSave(rm);if(G&&G.view==='title'&&!inRun()&&ov.classList.contains('tov'))titleScreen();if(same){CLOUD.state='저장됨';renderAccount();return}}pushNow()}
 function cloudErr(e){const c=e&&e.code||'';if(c==='auth/popup-closed-by-user'||c==='auth/cancelled-popup-request')return '';if(c==='auth/network-request-failed')return '인터넷 연결을 확인해 주세요';return '로그인하지 못했어요. 다시 시도해 주세요'}
 function cloudLogin(){CLOUD.msg='';const pv=new firebase.auth.GoogleAuthProvider();CLOUD.auth.signInWithPopup(pv).catch(e=>{const c=e&&e.code||'';if(c==='auth/popup-blocked'||c==='auth/operation-not-supported-in-this-environment'){CLOUD.auth.signInWithRedirect(pv).catch(x=>{CLOUD.msg=cloudErr(x);renderAccount()});return}CLOUD.msg=cloudErr(e);renderAccount()})}
 function renderAccount(){const box=document.getElementById('acc');if(!box)return;if(!CLOUD.host||(!CLOUD.ok&&!CLOUD.msg)){box.hidden=true;return}box.hidden=false;box.innerHTML='';const info=document.createElement('div');info.className='accInfo';
@@ -706,6 +722,7 @@ const line=(t,c,sz)=>{const d=document.createElement('div');d.innerHTML=pimg(t,s
 if(CLOUD.user){info.append(line((CLOUD.user.email||'내 계정')+' · '+(CLOUD.state||'로그인됨'),'#8c8c99',11));const b=document.createElement('button');b.className='ghost sm';b.innerHTML=pimg('로그아웃',12,'#b8b8c4');b.onclick=()=>CLOUD.auth.signOut();box.append(info,b)}
 else if(CLOUD.ok){info.append(line(CLOUD.msg||'로그인하면 다른 기기에서도 이어 해요','#8c8c99',11));const b=document.createElement('button');b.className='ghost sm';b.innerHTML=pimg('구글로 로그인',12,'#ece8de');b.onclick=cloudLogin;box.append(info,b)}
 else box.append(line(CLOUD.msg,'#8c8c99',11))}
+window.addEventListener('pagehide',()=>{try{if(CLOUD.ref&&CLOUD.timer){clearTimeout(CLOUD.timer);pushNow()}}catch(e){}});
 function initCloud(){if(!CLOUD.host)return;const load=u=>new Promise((ok,no)=>{const t=document.createElement('script');t.src=u;t.onload=ok;t.onerror=no;document.head.appendChild(t)}),base='https://www.gstatic.com/firebasejs/10.14.1/';
 load(base+'firebase-app-compat.js').then(()=>load(base+'firebase-auth-compat.js')).then(()=>load(base+'firebase-database-compat.js')).then(()=>{
 firebase.initializeApp({apiKey:'AIzaSyA2tiPv0gCWpFVNov9lvrOk0BkPEapOnHA',authDomain:'quidditch-a8936.firebaseapp.com',databaseURL:'https://quidditch-a8936-default-rtdb.asia-southeast1.firebasedatabase.app',projectId:'quidditch-a8936',appId:'1:535725884129:web:42c812bd4df507eee72da0'});
@@ -728,13 +745,13 @@ document.getElementById('next').onclick=async()=>{sfx(440,0.1,'square',0.04);awa
 
 function bestRound(){try{return +(localStorage.getItem('mg_best2')||0)}catch(e){return 0}}
 function statsHtml(){return `<div class="rules">${G.asc||META.ascMax?pimg((G.asc?'도전 '+G.asc+'단계':'기본 난이도')+' · 최고 클리어 '+(META.ascClear||0)+'단계',14,'#ff8a7a'):''}${pimg('이번 판 영혼 +'+(G.soulsRun||0)+' (모은 영혼 '+META.souls+')',15,'#cfe0ff')}${pimg('잡은 적 '+(G.kills||0)+'마리',14,'#d6d6de')}${pimg('최고 콤보 x'+(G.bestCombo||0),14,'#f0c040')}${pimg('보스 격파 '+(G.bossKills||0)+' / 3',14,'#ff8a7a')}${pimg('받은 축복 '+G.cards.size+'개',14,'#cfe0ff')}</div>`}
-async function victory(){G.mode='over';setBgm('calm');gainSoul(10);{const pm=META.ascMax||0;if(G.asc>=pm&&pm<8){META.ascMax=pm+1;G.newAsc=META.ascMax}if(G.asc>=1&&G.asc>(META.ascClear||0)){META.ascClear=G.asc;gainSoul(G.asc*5)}saveMeta()}G.inspect=null;G.sel=null;updatePanel();try{localStorage.setItem('mg_win',String((+(localStorage.getItem('mg_win')||0))+1))}catch(e){}
+async function victory(){G.mode='over';clearRun();setBgm('calm');gainSoul(10);{const pm=META.ascMax||0;if(G.asc>=pm&&pm<8){META.ascMax=pm+1;G.newAsc=META.ascMax}if(G.asc>=1&&G.asc>(META.ascClear||0)){META.ascClear=G.asc;gainSoul(G.asc*5)}saveMeta()}G.inspect=null;G.sel=null;updatePanel();try{localStorage.setItem('mg_win',String((+(localStorage.getItem('mg_win')||0))+1))}catch(e){}
 [523,659,784,1047,1319].forEach((fq,i)=>setTimeout(()=>sfx(fq,0.22,'square',0.05),i*120));for(const p of mine())setTimeout(()=>wobble(p,0.9,600),Math.random()*400);
 G.banner={text:'정복 완료!',sub:'검은 왕좌를 무너뜨렸어요',t0:performance.now(),dur:2200};await sleep(2000);await blinds(1,600);
 showOv(`<div class="sheet"><div class="logo">${pimg('VICTORY',32,'#f0c040',{font:FP,ol:2})}</div>${pimg('3막의 보스를 모두 쓰러뜨렸어요',16,'#ece8de')}${G.newAsc?pimg('도전 '+G.newAsc+'단계가 열렸어요!',16,'#f0c040',{ol:2}):''}${statsHtml()}<div class="row"><button class="ghost" id="home">${pimg('처음으로',15,'#b8b8c4')}</button><button class="primary" id="endless">${pimg('무한 모드로 계속',15,'#ffffff')}</button></div></div>`);
 document.getElementById('home').onclick=async()=>{await closeOv();newGame();G.mode='title';G.view='board';updatePanel();titleScreen()};
 document.getElementById('endless').onclick=async()=>{await closeOv();G.endless=true;G.act=4;genMap();openMapView()}}
-async function gameOver(){G.mode='over';setBgm(null);BGM.want='calm';const best=Math.max(bestRound(),G.prog||1);try{localStorage.setItem('mg_best2',best)}catch(e){}
+async function gameOver(){G.mode='over';clearRun();setBgm(null);BGM.want='calm';const best=Math.max(bestRound(),G.prog||1);try{localStorage.setItem('mg_best2',best)}catch(e){}
 updatePanel();[392,330,262,196].forEach((fq,i)=>setTimeout(()=>sfx(fq,0.3,'triangle',0.05),i*180));await sleep(600);await blinds(1,700);
 showOv(`<div class="sheet"><div class="logo">${pimg('GAME',32,'#ece8de',{font:FP,ol:2})}${pimg('OVER',32,'#e0483d',{font:FP,ol:2})}</div>${pimg((G.act>3?'무한의 탑 ':G.act+'막 ')+Math.max(1,G.floor)+'층에서 쓰러졌어요',16,'#ece8de')}${statsHtml()}${pimg('최고 기록 '+(best>15?'무한의 탑 '+(best-15)+'층':Math.ceil(best/5)+'막 '+(((best-1)%5)+1)+'층'),13,'#8c8c99')}<div class="row"><button class="ghost" id="home">${pimg('처음으로',15,'#b8b8c4')}</button><button class="primary" id="again">${pimg('다시 하기',16,'#ffffff')}</button></div></div>`);document.getElementById('home').onclick=async()=>{await closeOv();newGame();G.mode='title';G.view='board';updatePanel();titleScreen()};
 document.getElementById('again').onclick=async()=>{await closeOv();startRun()}}
@@ -751,17 +768,19 @@ function ascInner(mw){const mx=META.ascMax||0,sel=Math.min(META.ascSel||0,mx);re
 const RULES=[['흰 말을 눌러서 체스 규칙대로 움직여요.','#d6d6de'],['적을 쓰러뜨리면 같은 말이 한 번 더 움직여요. 이어 잡을수록 콤보! (때리기만 하면 턴이 끝나요)','#f0c040'],['빨간 칸은 적이 다음에 오는 곳이에요. 거기 있으면 잡혀요.','#ff8a7a'],['킹이 잡히거나 적 폰이 맨 아래에 닿으면 목숨이 줄어요.','#d6d6de'],['레벨 업과 전투 승리 때 축복 카드를 골라요.','#d6d6de'],['지도에서 길을 골라 올라가요. 3막의 보스를 쓰러뜨리면 승리!','#cfe0ff']];
 function ascMini(){const mx=META.ascMax||0,sel=Math.min(META.ascSel||0,mx);return `<div class="ascRow"><button class="ghost sm" data-d="-1" ${sel<=0?'disabled':''} aria-label="낮은 단계">${pimg('◀',12,'#ece8de')}</button><div class="ascLbl">${pimg(sel?'도전 '+sel+'단계':'기본 난이도',16,sel?'#ff8a7a':'#ece8de',{ol:2})}${pimg(sel?ASC[sel].n+' 외 '+(sel-1)+'개 · 영혼 +'+sel*20+'%':'열린 단계 '+mx+'/8',11,sel?'#f0c040':'#8c8c99')}</div><button class="ghost sm" data-d="1" ${sel>=mx?'disabled':''} aria-label="높은 단계">${pimg('▶',12,'#ece8de')}</button></div>`}
 function titleScreen(){G.view='title';setBgm('calm');if(CLOUD.pending)setTimeout(()=>applyRemote(CLOUD.pending),0);G.titleT0=performance.now();G.titleBoss=BALL[Math.floor(Math.random()*6)];
-showOv(`<div class="tmenu">${META.ascMax>0?'<div class="asc" id="asc">'+ascMini()+'</div>':''}<button class="primary big" id="go">${pimg('시작',22,'#ffffff',{ol:2})}</button><div class="trow"><button class="ghost" id="rules">${pimg('? 규칙',13,'#b8b8c4')}</button><button class="ghost" id="codex">${pimg('도감',13,'#b8b8c4')}</button><button class="ghost" id="altar">${pimg('제단 · 영혼 '+META.souls,13,'#cfe0ff',{nw:1})}</button><button class="ghost snd" id="snd" aria-label="소리 설정">${pimg('♪ 소리',13,'#b8b8c4')}</button></div>${pimg('시작 군대: '+((UNL.find(u=>u.id===META.army&&hasU(u.id))||{name:'기본 군대'}).name)+(META.ascMax>0?'':' · 3막을 깨면 도전 단계가 열려요'),11,'#6e6e7a')}<div class="acc" id="acc" hidden></div></div>`);ov.classList.add('tov');renderAccount();
+showOv(`<div class="tmenu">${META.ascMax>0?'<div class="asc" id="asc">'+ascMini()+'</div>':''}${hasRun()?`<button class="primary big" id="go">${pimg('이어 하기',22,'#ffffff',{ol:2})}${pimg(runLabel(readRun()),12,'#ffd8d0')}</button><button class="ghost" id="fresh">${pimg('새로 시작',13,'#b8b8c4')}</button>`:`<button class="primary big" id="go">${pimg('시작',22,'#ffffff',{ol:2})}</button>`}<div class="trow"><button class="ghost" id="rules">${pimg('? 규칙',13,'#b8b8c4')}</button><button class="ghost" id="codex">${pimg('도감',13,'#b8b8c4')}</button><button class="ghost" id="altar">${pimg('제단 · 영혼 '+META.souls,13,'#cfe0ff',{nw:1})}</button><button class="ghost snd" id="snd" aria-label="소리 설정">${pimg('♪ 소리',13,'#b8b8c4')}</button></div>${pimg('시작 군대: '+((UNL.find(u=>u.id===META.army&&hasU(u.id))||{name:'기본 군대'}).name)+(META.ascMax>0?'':' · 3막을 깨면 도전 단계가 열려요'),11,'#6e6e7a')}<div class="acc" id="acc" hidden></div></div>`);ov.classList.add('tov');renderAccount();
 const bye=async f=>{ov.classList.remove('tov');await closeOv();f()};
 document.getElementById('altar').onclick=()=>bye(openAltar);document.getElementById('snd').onclick=()=>bye(()=>openSound(titleScreen));document.getElementById('codex').onclick=()=>bye(openCodex);document.getElementById('rules').onclick=()=>bye(openRules);
 {const el=document.getElementById('asc');if(el)el.addEventListener('click',ev=>{const b=ev.target.closest('[data-d]');if(!b||b.disabled)return;META.ascSel=Math.max(0,Math.min(META.ascMax,(META.ascSel||0)+(+b.dataset.d)));saveMeta();sfx(META.ascSel?440+META.ascSel*40:440,0.06,'square',0.04);el.innerHTML=ascMini()})}
-document.getElementById('go').onclick=async()=>{sfx(440,0.1,'square',0.04);ov.classList.remove('tov');G.view='board';await closeOv();if(!META.tutDone&&!(META.total>0))startTutorial();else startRun()}}
+const fresh=async()=>{ov.classList.remove('tov');G.view='board';await closeOv();if(!META.tutDone&&!(META.total>0))startTutorial();else startRun()};
+document.getElementById('go').onclick=async()=>{sfx(440,0.1,'square',0.04);if(hasRun()){ov.classList.remove('tov');await closeOv();resumeRun()}else fresh()};
+{const fb=document.getElementById('fresh');if(fb)fb.onclick=()=>{sfx(330,0.06,'square',0.03);ov.classList.remove('tov');showOv(`<div class="sheet">${pimg('새로 시작할까요?',18,'#ece8de',{ol:2})}${pimg('진행 중인 판('+runLabel(readRun())+')이 사라져요. 모은 영혼과 해금은 그대로예요.',13,'#b8b8c4',{maxW:(sheetW()-52)/SC,align:'center'})}<div class="row"><button class="ghost" id="f_no">${pimg('아니요',15,'#b8b8c4')}</button><button class="primary" id="f_yes">${pimg('새로 시작',15,'#fff')}</button></div></div>`);document.getElementById('f_no').onclick=async()=>{await closeOv();titleScreen()};document.getElementById('f_yes').onclick=async()=>{sfx(220,0.12,'square',0.04);clearRun();await closeOv();G.view='board';if(!META.tutDone&&!(META.total>0))startTutorial();else startRun()}}}}
 function openMenu(){const back=G.mode;G.mode='busy';const where=(G.act>3?'무한의 탑 ':G.act+'막 ')+Math.max(1,G.floor||1)+'층';
 const main=()=>{showOv(`<div class="sheet">${pimg('잠깐 멈춤',20,'#ece8de',{ol:2})}${pimg(where+(G.asc?' · 도전 '+G.asc+'단계':'')+' · 영혼 '+META.souls,13,'#8c8c99')}<div class="mcol"><button class="primary" id="m_go">${pimg('계속하기',16,'#fff')}</button><button class="ghost" id="m_new">${pimg('새 게임',15,'#ece8de')}</button><button class="ghost" id="m_home">${pimg('첫 화면으로',15,'#b8b8c4')}</button><button class="ghost" id="m_snd">${pimg('소리 설정',15,'#cfe0ff')}</button></div></div>`);
 document.getElementById('m_snd').onclick=()=>{sfx(520,0.05,'square',0.03);openSound(main)};
 document.getElementById('m_go').onclick=async()=>{sfx(440,0.06,'square',0.03);await closeOv();G.mode=back};
-document.getElementById('m_new').onclick=()=>ask('새 게임을 시작할까요?','지금 하던 판은 사라져요. 모은 영혼과 해금은 그대로예요.','새로 시작',async()=>{await closeOv();anims.length=0;parts.length=0;dead.length=0;startRun()});
-document.getElementById('m_home').onclick=()=>ask('첫 화면으로 갈까요?','지금 하던 판은 사라져요. 모은 영혼과 해금은 그대로예요.','첫 화면으로',async()=>{await closeOv();anims.length=0;parts.length=0;dead.length=0;newGame();G.mode='title';G.view='board';updatePanel();titleScreen()})};
+document.getElementById('m_new').onclick=()=>ask('새 게임을 시작할까요?','지금 하던 판은 사라져요. 모은 영혼과 해금은 그대로예요.','새로 시작',async()=>{clearRun();await closeOv();anims.length=0;parts.length=0;dead.length=0;startRun()});
+document.getElementById('m_home').onclick=()=>ask('첫 화면으로 갈까요?','지금 판은 마지막 저장 지점(지도 또는 내 차례 시작)에서 이어 할 수 있어요.','첫 화면으로',async()=>{await closeOv();anims.length=0;parts.length=0;dead.length=0;newGame();G.mode='title';G.view='board';updatePanel();titleScreen()})};
 const ask=(t,d,yes,fn)=>{sfx(330,0.06,'square',0.03);showOv(`<div class="sheet">${pimg(t,18,'#ece8de',{ol:2})}${pimg(d,13,'#b8b8c4',{maxW:(sheetW()-52)/SC,align:'center'})}<div class="row"><button class="ghost" id="m_no">${pimg('아니요',15,'#b8b8c4')}</button><button class="primary" id="m_yes">${pimg(yes,15,'#fff')}</button></div></div>`);
 document.getElementById('m_no').onclick=()=>{sfx(440,0.05,'square',0.03);main()};document.getElementById('m_yes').onclick=()=>{sfx(220,0.12,'square',0.04);fn()}};
 main()}
@@ -1019,7 +1038,7 @@ const vg=g.createRadialGradient(180,300,160,180,300,420);vg.addColorStop(0,'rgba
 let last=performance.now();
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(50,now-last);last=now;const frozen=G&&now<G.freezeUntil,slow=G&&!frozen&&now<(G.slowUntil||0)?0.32:1;
 for(let i=anims.length-1;i>=0;i--){const a=anims[i];if(frozen){a.t0+=dt;continue}if(slow<1)a.t0+=dt*(1-slow);const k=Math.min(1,(now-a.t0)/a.dur);a.upd(a.ease(k),k);if(k>=1){anims.splice(i,1);a.res()}}
-render(now,frozen?0:dt*slow,dt);tutTick()}
+render(now,frozen?0:dt*slow,dt);tutTick();try{runTick()}catch(e){}}
 function render(now,dt,rdt){if(G&&G.view==='title'){drawTitle(ctx,now);return}render0(now,dt,rdt)}
 function render0(now,dt,rdt){const g=ctx;g.setTransform(K,0,0,K,0,0);g.imageSmoothingEnabled=false;
 let sx=0,sy=0;if(G&&G.shake>0.3&&!RM){sx=(Math.random()-0.5)*G.shake;sy=(Math.random()-0.5)*G.shake}if(G)G.shake*=Math.pow(0.85,rdt/16);
