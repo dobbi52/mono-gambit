@@ -80,6 +80,14 @@ button.ghost{background:#1e1e24;box-shadow:inset 0 2px 0 #2c2c34,inset 0 -4px 0 
 .cx img{height:44px;image-rendering:pixelated}
 .cx.locked img{filter:brightness(0) opacity(.5)}
 @media (prefers-reduced-motion:reduce){.intro .introPic img,.intro.flip{animation:none}}
+#ov.tov{background:linear-gradient(rgba(6,6,9,0) 0%,rgba(6,6,9,0) 62%,rgba(6,6,9,.75) 74%);align-items:flex-end}
+.tmenu{display:flex;flex-direction:column;align-items:center;gap:9px;width:100%;max-width:340px;transform:translateY(16px);opacity:0;transition:transform .5s cubic-bezier(.2,.9,.3,1.2) .35s,opacity .4s .35s}
+#ov.in .tmenu{transform:none;opacity:1}#ov.out .tmenu{opacity:0}
+button.big{width:100%;padding:12px 0 15px;animation:tgo 2.2s ease-in-out infinite}
+@keyframes tgo{0%,100%{filter:brightness(1)}50%{filter:brightness(1.18)}}
+.trow{display:flex;gap:6px;width:100%}.trow button{flex:1;padding:8px 4px 11px}
+.tmenu .ascRow{width:100%;justify-content:space-between;background:rgba(20,12,14,.85);border:2px solid #000;padding:4px}
+.ascLbl{display:flex;flex-direction:column;align-items:center;gap:2px}button.sm{padding:6px 10px 9px}
 .asc{display:flex;flex-direction:column;gap:6px;width:100%;align-items:center}.ascRow{display:flex;align-items:center;gap:12px}.ascRow button{padding:6px 12px 9px}.ascList{display:flex;flex-direction:column;gap:4px;align-items:flex-start;text-align:left;width:100%;background:#1a1012;border:2px solid #000;box-shadow:inset 0 3px 0 #0c0c0f;padding:8px 10px}
 .shop{display:flex;flex-direction:column;gap:6px;width:100%}
 .item{display:flex;align-items:center;gap:10px;text-align:left;width:100%;justify-content:flex-start}
@@ -610,10 +618,15 @@ ov.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{const id=b.dataset.u;i
 document.getElementById('back').onclick=async()=>{sfx(440,0.08,'square',0.03);await closeOv();titleScreen()}};
 showOv('<div class="sheet"></div>');render()}
 function ascInner(mw){const mx=META.ascMax||0,sel=Math.min(META.ascSel||0,mx);return `<div class="ascRow"><button class="ghost" data-d="-1" ${sel<=0?'disabled':''} aria-label="낮은 단계">${pimg('◀',14,'#ece8de')}</button>${pimg(sel?'도전 '+sel+'단계':'기본 난이도',18,sel?'#ff8a7a':'#ece8de',{ol:2})}<button class="ghost" data-d="1" ${sel>=mx?'disabled':''} aria-label="높은 단계">${pimg('▶',14,'#ece8de')}</button></div>`+(sel?`<div class="ascList">${ASC.slice(1,sel+1).map((a,i)=>pimg((i+1)+'. '+a.n+' · '+a.d,12,i+1===sel?'#f0c040':'#b8b8c4',{maxW:mw})).join('')}${pimg('영혼 +'+sel*20+'% · 열린 단계 '+mx+'/8'+((META.ascClear||0)?' · 최고 클리어 '+META.ascClear:''),12,'#cfe0ff',{maxW:mw})}</div>`:pimg('도전 단계를 고르면 규칙이 더해지고 영혼을 더 받아요 · 열린 단계 '+mx+'/8',12,'#8c8c99',{maxW:mw,align:'center'}))}
-function titleScreen(){const mw=(sheetW()-28-24)/SC;
-const rules=[['흰 말을 눌러서 체스 규칙대로 움직여요.','#d6d6de'],['적을 쓰러뜨리면 같은 말이 한 번 더 움직여요. 이어 잡을수록 콤보! (때리기만 하면 턴이 끝나요)','#f0c040'],['빨간 칸은 적이 다음에 오는 곳이에요. 거기 있으면 잡혀요.','#ff8a7a'],['킹이 잡히거나 적 폰이 맨 아래에 닿으면 목숨이 줄어요.','#d6d6de'],['레벨 업과 전투 승리 때 축복 카드를 골라요.','#d6d6de'],['지도에서 길을 골라 올라가요. 3막의 보스를 쓰러뜨리면 승리!','#cfe0ff']];
-showOv(`<div class="sheet"><div class="logo">${pimg('MONO',32,'#ece8de',{font:FP,ol:2})}${pimg('GAMBIT',32,'#f0c040',{font:FP,ol:2})}</div>${pimg('끝없이 내려오는 검은 군대를 체스말로 막아요',14,'#8c8c99',{maxW:mw,align:'center'})}<div class="rules">${rules.map(r=>pimg('· '+r[0],14,r[1],{maxW:mw})).join('')}</div>${META.ascMax>0?'<div class="asc" id="asc">'+ascInner(mw)+'</div>':pimg('3막을 깨면 도전 단계가 열려요',12,'#6e6e7a')}<div class="row"><button class="ghost" id="codex">${pimg('도감',15,'#b8b8c4')}</button><button class="ghost" id="altar">${pimg('영혼의 제단 · '+META.souls,15,'#cfe0ff')}</button><button class="primary" id="go">${pimg('시작',18,'#ffffff')}</button></div>${pimg('시작 군대: '+((UNL.find(u=>u.id===META.army&&hasU(u.id))||{name:'기본 군대'}).name),12,'#8c8c99')}</div>`);document.getElementById('altar').onclick=async()=>{await closeOv();openAltar()};document.getElementById('codex').onclick=async()=>{await closeOv();openCodex()};{const el=document.getElementById('asc');if(el)el.addEventListener('click',ev=>{const b=ev.target.closest('[data-d]');if(!b||b.disabled)return;META.ascSel=Math.max(0,Math.min(META.ascMax,(META.ascSel||0)+(+b.dataset.d)));saveMeta();sfx(META.ascSel?440+META.ascSel*40:440,0.06,'square',0.04);el.innerHTML=ascInner(mw)})}
-document.getElementById('go').onclick=async()=>{sfx(440,0.1,'square',0.04);await closeOv();startRun()}}
+const RULES=[['흰 말을 눌러서 체스 규칙대로 움직여요.','#d6d6de'],['적을 쓰러뜨리면 같은 말이 한 번 더 움직여요. 이어 잡을수록 콤보! (때리기만 하면 턴이 끝나요)','#f0c040'],['빨간 칸은 적이 다음에 오는 곳이에요. 거기 있으면 잡혀요.','#ff8a7a'],['킹이 잡히거나 적 폰이 맨 아래에 닿으면 목숨이 줄어요.','#d6d6de'],['레벨 업과 전투 승리 때 축복 카드를 골라요.','#d6d6de'],['지도에서 길을 골라 올라가요. 3막의 보스를 쓰러뜨리면 승리!','#cfe0ff']];
+function ascMini(){const mx=META.ascMax||0,sel=Math.min(META.ascSel||0,mx);return `<div class="ascRow"><button class="ghost sm" data-d="-1" ${sel<=0?'disabled':''} aria-label="낮은 단계">${pimg('◀',12,'#ece8de')}</button><div class="ascLbl">${pimg(sel?'도전 '+sel+'단계':'기본 난이도',16,sel?'#ff8a7a':'#ece8de',{ol:2})}${pimg(sel?ASC[sel].n+' 외 '+(sel-1)+'개 · 영혼 +'+sel*20+'%':'열린 단계 '+mx+'/8',11,sel?'#f0c040':'#8c8c99')}</div><button class="ghost sm" data-d="1" ${sel>=mx?'disabled':''} aria-label="높은 단계">${pimg('▶',12,'#ece8de')}</button></div>`}
+function titleScreen(){G.view='title';G.titleT0=performance.now();G.titleBoss=BALL[Math.floor(Math.random()*6)];
+showOv(`<div class="tmenu">${META.ascMax>0?'<div class="asc" id="asc">'+ascMini()+'</div>':''}<button class="primary big" id="go">${pimg('시작',22,'#ffffff',{ol:2})}</button><div class="trow"><button class="ghost" id="rules">${pimg('? 규칙',13,'#b8b8c4')}</button><button class="ghost" id="codex">${pimg('도감',13,'#b8b8c4')}</button><button class="ghost" id="altar">${pimg('제단 · 영혼 '+META.souls,13,'#cfe0ff')}</button></div>${pimg('시작 군대: '+((UNL.find(u=>u.id===META.army&&hasU(u.id))||{name:'기본 군대'}).name)+(META.ascMax>0?'':' · 3막을 깨면 도전 단계가 열려요'),11,'#6e6e7a')}</div>`);ov.classList.add('tov');
+const bye=async f=>{ov.classList.remove('tov');await closeOv();f()};
+document.getElementById('altar').onclick=()=>bye(openAltar);document.getElementById('codex').onclick=()=>bye(openCodex);document.getElementById('rules').onclick=()=>bye(openRules);
+{const el=document.getElementById('asc');if(el)el.addEventListener('click',ev=>{const b=ev.target.closest('[data-d]');if(!b||b.disabled)return;META.ascSel=Math.max(0,Math.min(META.ascMax,(META.ascSel||0)+(+b.dataset.d)));saveMeta();sfx(META.ascSel?440+META.ascSel*40:440,0.06,'square',0.04);el.innerHTML=ascMini()})}
+document.getElementById('go').onclick=async()=>{sfx(440,0.1,'square',0.04);ov.classList.remove('tov');G.view='board';await closeOv();startRun()}}
+function openRules(){const mw=(sheetW()-28-24)/SC,sel=Math.min(META.ascSel||0,META.ascMax||0);showOv(`<div class="sheet">${pimg('게임 방법',20,'#ece8de',{ol:2})}<div class="rules">${RULES.map(r=>pimg('· '+r[0],14,r[1],{maxW:mw})).join('')}</div>${sel?'<div class="ascList">'+pimg('도전 '+sel+'단계 규칙',13,'#ff8a7a')+ASC.slice(1,sel+1).map((a,i)=>pimg((i+1)+'. '+a.n+' · '+a.d,12,i+1===sel?'#f0c040':'#b8b8c4',{maxW:mw})).join('')+'</div>':''}<button class="primary" id="rok">${pimg('알겠어요',16,'#fff')}</button></div>`);document.getElementById('rok').onclick=async()=>{await closeOv();titleScreen()}}
 
 /* 돌판 패널 상태 */
 function updatePanel(msg){if(!G)return;let main,sub='';
@@ -780,11 +793,46 @@ G.rerollRect=null;
 ['fight','elite','shop','rest','event'].forEach((t,i)=>{const cx=48+i*66,x=cx-20,y=y0;well(g,x,y,40,40);pixIc(g,t,x+4,y+4,2);dtext(g,NODE[t].name.replace(' 전투',''),cx,y+54,12,NCOL[t],{anchor:'center',mid:true})});
 dtext(g,'군대 '+mine().length+'명 · 축복 '+G.cards.size+'개 · 영혼 '+META.souls+(G.rerollLeft>0?' · 다시 뽑기 1번':''),180,y0+76,12,'#8c8c99',{anchor:'center',mid:true})}
 
+const TDUST=Array.from({length:34},(_,i)=>({x:(i*97)%360,y:(i*53)%460,s:0.25+((i*37)%10)/22,z:1+(i%3)}));
+function drawTitle(g,now){g.setTransform(K,0,0,K,0,0);g.imageSmoothingEnabled=false;const t=now-(G.titleT0||0),e=k=>Math.max(0,Math.min(1,k)),bob=(p,a)=>Math.round(Math.sin(now/600+p)*a);
+g.fillStyle='#09080c';g.fillRect(0,0,LW,LH);
+/* 뒷벽 벽돌 */
+for(let r=0;r<12;r++){const y=r*20,off=(r%2)*22;for(let c=-1;c<9;c++){const x=c*44+off;g.fillStyle=(r*7+c*3)%5===0?'#1a1920':'#151419';g.fillRect(x+1,y+1,42,18);g.fillStyle='#201f27';g.fillRect(x+1,y+1,42,2)}}
+/* 바닥 체스판(원근) */
+const Y0=236,Y1=520,rows=7;for(let r=0;r<rows;r++){const a=r/rows,b=(r+1)/rows,f=k=>Y0+(Y1-Y0)*k*k*0.55+(Y1-Y0)*k*0.45,ya=f(a),yb=f(b),wa=200+260*a,wb=200+260*b;
+for(let c=0;c<6;c++){const xa0=180-wa/2+wa*c/6,xa1=180-wa/2+wa*(c+1)/6,xb0=180-wb/2+wb*c/6,xb1=180-wb/2+wb*(c+1)/6;g.fillStyle=(r+c)%2?'#2e2d35':'#232229';g.beginPath();g.moveTo(xa0,ya);g.lineTo(xa1,ya);g.lineTo(xb1,yb);g.lineTo(xb0,yb);g.closePath();g.fill()}}
+g.fillStyle='#000';g.fillRect(0,Y0-3,LW,3);
+{const sh=g.createLinearGradient(0,Y0,0,Y0+90);sh.addColorStop(0,'rgba(9,8,12,0.85)');sh.addColorStop(1,'rgba(9,8,12,0)');g.fillStyle=sh;g.fillRect(0,Y0,LW,90)}
+/* 횃불 */
+for(const tx of[34,326]){const ty=196,fl=0.85+0.15*Math.sin(now/90+tx);const gl=g.createRadialGradient(tx,ty,4,tx,ty,130*fl);gl.addColorStop(0,'rgba(255,150,60,0.26)');gl.addColorStop(1,'rgba(255,150,60,0)');g.fillStyle=gl;g.fillRect(tx-140,ty-140,280,280);
+g.fillStyle='#000';g.fillRect(tx-5,ty-1,10,18);g.fillStyle='#3a2a1c';g.fillRect(tx-3,ty,6,16);g.fillStyle='#e0603a';g.fillRect(tx-5,ty-10*fl,10,11*fl);g.fillStyle='#f0c040';g.fillRect(tx-3,ty-6*fl,6,7*fl);g.fillStyle='#fff3c0';g.fillRect(tx-1,ty-2,2,3)}
+/* 보스 */
+const bk='B'+G.titleBoss.slice(1),bt=e((t-500)/700),bp=0.5+0.5*Math.sin(now/420);
+{const by=290+bob(0,2)-Math.round((1-EASE.out(bt))*30);const au=g.createRadialGradient(180,by-40,6,180,by-40,110);au.addColorStop(0,`rgba(224,72,61,${(0.22+0.12*bp)*bt})`);au.addColorStop(1,'rgba(224,72,61,0)');g.fillStyle=au;g.fillRect(40,by-170,280,220);
+pxEll(g,180,by,34,7,'rgba(0,0,0,0.6)');sprAt(g,bk,180,by,PAL.kb,0,0,bt,1.3);
+dtext(g,ROLE[G.titleBoss].name,180,by+16,12,`rgba(255,138,122,${bt*(0.6+0.4*bp)})`,{anchor:'center',mid:true})}
+/* 검은 군대 */
+for(let i=0;i<5;i++){const x=72+i*54,by=350+(i%2)*6+bob(i*1.3,1),k=e((t-250-i*90)/450);if(k<=0)continue;pxEll(g,x,by,12,4,'rgba(0,0,0,0.55)');sprAt(g,i===1||i===3?'p':'p',x,by-Math.round((1-EASE.out(k))*-0),i===2?PAL.ksh:PAL.k,0,Math.round((1-EASE.out(k))*26),k,1.05)}
+/* 흰 군대 */
+const W=[['r',52],['n',116],['k',180],['b',244],['q',308]];W.forEach(([tp,x],i)=>{const k=e((t-900-i*110)/420);if(k<=0)return;const by=454+Math.abs(i-2)*-6,br=Math.sin(now/520+i)*0.05,lift=Math.round((1-EASE.out(k))*40);
+pxEll(g,x,by,15,5,'rgba(0,0,0,0.6)');if(tp==='k'){const gl=g.createRadialGradient(x,by-30,4,x,by-30,60);gl.addColorStop(0,'rgba(240,192,64,0.18)');gl.addColorStop(1,'rgba(240,192,64,0)');g.fillStyle=gl;g.fillRect(x-60,by-90,120,120)}sprAt(g,tp,x,by,PAL.w,br,lift,k,1.2)});
+/* 먼지 */
+for(const d of TDUST){const y=((d.y-now*0.012*d.s)%470+470)%470,x=d.x+Math.sin(now/1300+d.y)*8;g.fillStyle=`rgba(255,220,170,${0.15+0.12*d.z})`;g.fillRect(Math.round(x),Math.round(y),d.z>2?2:1,d.z>2?2:1)}
+/* 로고 */
+const lk=EASE.out(e(t/700));g.globalAlpha=lk;const ly=Math.round(-20*(1-lk));
+{const gl=g.createRadialGradient(180,100,10,180,100,170);gl.addColorStop(0,'rgba(0,0,0,0.7)');gl.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gl;g.fillRect(0,0,LW,230)}
+'MONO'.split('').forEach((c,i)=>dtext(g,c,108+i*48,62+ly+bob(i*0.8,2),46,'#ece8de',{anchor:'center',mid:true,font:FP,ol:2}));
+'GAMBIT'.split('').forEach((c,i)=>dtext(g,c,60+i*48,114+ly+bob(i*0.8+2,2),46,i%2?'#f0c040':'#e8b030',{anchor:'center',mid:true,font:FP,ol:2}));
+g.fillStyle='#000';g.fillRect(84,148+ly,192,4);g.fillStyle='#7a2e28';g.fillRect(86,149+ly,188,2);
+dtext(g,'끝없이 내려오는 검은 군대를 체스말로 막아요',180,170+ly,13,'#a8a8b4',{anchor:'center',mid:true});g.globalAlpha=1;
+/* 비네트 */
+const vg=g.createRadialGradient(180,300,160,180,300,420);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,0.75)');g.fillStyle=vg;g.fillRect(0,0,LW,LH)}
 let last=performance.now();
 function frame(now){requestAnimationFrame(frame);const dt=Math.min(50,now-last);last=now;const frozen=G&&now<G.freezeUntil;
 for(let i=anims.length-1;i>=0;i--){const a=anims[i];if(frozen){a.t0+=dt;continue}const k=Math.min(1,(now-a.t0)/a.dur);a.upd(a.ease(k),k);if(k>=1){anims.splice(i,1);a.res()}}
 render(now,frozen?0:dt,dt)}
-function render(now,dt,rdt){const g=ctx;g.setTransform(K,0,0,K,0,0);g.imageSmoothingEnabled=false;
+function render(now,dt,rdt){if(G&&G.view==='title'){drawTitle(ctx,now);return}render0(now,dt,rdt)}
+function render0(now,dt,rdt){const g=ctx;g.setTransform(K,0,0,K,0,0);g.imageSmoothingEnabled=false;
 let sx=0,sy=0;if(G&&G.shake>0.3&&!RM){sx=(Math.random()-0.5)*G.shake;sy=(Math.random()-0.5)*G.shake}if(G)G.shake*=Math.pow(0.85,rdt/16);
 g.drawImage(bg,0,0,LW,LH);
 g.save();g.beginPath();g.rect(0,0,LW,PY);g.clip();g.translate(sx,sy);g.drawImage(bg,0,0,bg.width,Math.round(PY*K),0,0,LW,PY);
